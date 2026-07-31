@@ -9,6 +9,7 @@ query_info() {
     is_type=
     is_tls_pin_profile=
     is_tls_pin_server_name=
+    is_url_error=
     query_tls_pin_reset
 
     if [[ -z "$custom_remark" ]]; then
@@ -82,15 +83,14 @@ query_info() {
                     is_info_str=(${is_info_str[@]/http/tcp http})
                 fi
                 if [[ $net == "quic" ]]; then
-                    is_insecure=1
                     is_tls_pin_profile=vmess-quic
                     is_tls_pin_server_name=$tls_server_name
                     is_info_show+=(8 9 20)
-                    is_info_str+=(tls h3 true)
+                    is_info_str+=(tls h3 false)
                     query_tls_pin_prepare
                 fi
                 if [[ $net == "quic" ]]; then
-                    is_vmess_url=$(jq -cn --arg ps "$custom_remark" --arg add "$server_address" --arg port "$port" --arg id "$uuid" --arg net "$net" --arg type "$is_type" --arg sni "$tls_server_name" --arg pcs "$tls_pin_cert_sha256_hex" '{v:2,ps:$ps,add:$add,port:$port,id:$id,aid:"0",net:$net,type:$type,tls:"tls",sni:$sni,alpn:"h3",insecure:"1",pcs:$pcs}')
+                    is_vmess_url=$(jq -cn --arg ps "$custom_remark" --arg add "$server_address" --arg port "$port" --arg id "$uuid" --arg net "$net" --arg type "$is_type" --arg sni "$tls_server_name" --arg pcs "$tls_pin_cert_sha256_hex" '{v:2,ps:$ps,add:$add,port:$port,id:$id,aid:"0",net:$net,type:$type,tls:"tls",sni:$sni,alpn:"h3",pcs:$pcs}')
                 else
                     is_vmess_url=$(jq -cn --arg ps "$custom_remark" --arg add "$server_address" --arg port "$port" --arg id "$uuid" --arg net "$net" --arg type "$is_type" '{v:2,ps:$ps,add:$add,port:$port,id:$id,aid:"0",net:$net,type:$type}')
                 fi
@@ -105,7 +105,6 @@ query_info() {
             is_info_str=($is_protocol $is_addr $port $ss_password $ss_method)
             ;;
         trojan)
-            is_insecure=1
             is_tls_pin_profile=trojan-self-signed
             is_tls_pin_server_name=$tls_server_name
             is_can_change=(0 1 4)
@@ -115,12 +114,10 @@ query_info() {
             query_uri_param type tcp
             query_uri_param security tls
             query_uri_param sni "$tls_server_name"
-            query_uri_param insecure 1
-            query_uri_param allowInsecure 1
             query_uri_param pcs "$tls_pin_cert_sha256_hex"
             uri_query=$(query_uri_query)
             is_url="$is_protocol://$(query_uri_encode "$password")@$is_addr:$port${uri_query}#$encoded_remark"
-            is_info_str=($is_protocol $is_addr $port $password tcp tls true)
+            is_info_str=($is_protocol $is_addr $port $password tcp tls false)
             ;;
         hy*)
             is_tls_pin_profile=hysteria2
@@ -148,7 +145,6 @@ query_info() {
             query_uri_param sni "$tls_server_name"
             query_uri_param alpn h3
             query_uri_param insecure 1
-            query_uri_param allow_insecure 1
             query_uri_param pcs "$tls_pin_cert_sha256_hex"
             query_uri_param congestion_control bbr
             uri_query=$(query_uri_query)
@@ -198,8 +194,17 @@ query_info() {
             ;;
     esac
 
+    if [[ $is_tls_pin_profile && $tls_pin_error ]]; then
+        is_url_error="无法安全生成分享链接: $tls_pin_error"
+        is_url=
+    fi
+
     if [[ $is_show_all ]]; then
-        ui_link "$is_url"
+        if [[ $is_url ]]; then
+            ui_link "$is_url"
+        elif [[ $is_url_error ]]; then
+            warn "$is_config_name: $is_url_error"
+        fi
         return
     fi
 
@@ -220,6 +225,8 @@ query_info() {
         elif [[ $is_insecure ]]; then
             warn "某些客户端导入URL需手动将跳过证书验证设置为 true"
         fi
+    elif [[ $is_url_error ]]; then
+        warn "$is_url_error"
     fi
     if [[ $is_no_auto_tls ]]; then
         msg "------------- no-auto-tls INFO -------------"

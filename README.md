@@ -101,11 +101,13 @@ sb status   # 查看运行状态
 
 - VLESS/Reality、VMess、Trojan、Hysteria2、TUIC、Shadowsocks 和 SOCKS 分享内容会统一转义备注、路径和认证信息。
 - Reality 链接包含 `sni`、`pbk`、`sid` 和 `fp`；域名 TLS 节点显式包含 SNI。
-- Hysteria2 使用官方 `pinSHA256`。无域名/自签证书 Trojan、TUIC 和 VMess-QUIC 会附带 v2rayN/Xray 识别的 `pcs` 固定指纹，并保留旧客户端需要的 `insecure=1`。
-- sing-box 没有通用分享字段的固定指纹会由 `sb info <配置名>` 输出为 `certificate_public_key_sha256` 配置片段。
+- Trojan 和 VMess-QUIC 只使用 `pcs` 固定证书，不再导出 `insecure/allowInsecure`。
+- Hysteria2 按官方格式使用 `insecure=1 + pinSHA256`；TUIC 通用链接使用 `insecure=1 + pcs`。这两类链接不会允许缺少固定指纹的单独 `insecure`。
+- v2rayN 的 sing-box 出站暂不会把 URI 的 `pcs` 映射为 sing-box 公钥指纹，因此 `sb info <配置名>` 会继续输出 `certificate_public_key_sha256` 安全配置片段。
+- 如果证书指纹无法计算，脚本会拒绝生成该节点的 URL、二维码和订阅条目，不会退回到不验证证书。
 - 脚本更新后，客户端中已经导入的旧节点不会自动刷新；请重新运行 `sb url <配置名>` 或重新生成订阅后导入。
 
-兼容实现参考 [v2rayN 7.23.4](https://github.com/2dust/v2rayN/releases/tag/7.23.4)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
+兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.4](https://github.com/2dust/v2rayN/releases/tag/7.24.4)、[Xray-core v26.2.6](https://github.com/XTLS/Xray-core/releases/tag/v26.2.6)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
 
 ---
 

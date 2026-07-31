@@ -1,5 +1,15 @@
 # Release Notes
 
+## v26.7.31
+
+### 主要变化
+
+- 按 Xray-core v26.2.6 与 v2rayN 关于移除 `allowInsecure` 的说明，更新自签证书节点的长期兼容方案。
+- Trojan 和 VMess-QUIC 导出彻底移除 `insecure/allowInsecure`，只使用 `pcs` 映射到 Xray 的 `pinnedPeerCertSha256`。
+- Hysteria2 保留官方要求的 `insecure=1 + pinSHA256` 组合；TUIC 精简为 `insecure=1 + pcs`，并继续输出 sing-box 的 `certificate_public_key_sha256` 安全配置片段。
+- 证书指纹无法计算时将拒绝生成节点 URL、二维码或订阅条目，避免退回到未验证证书的连接方式。
+- `sb doctor`、分享链接静态检查和导出回归测试同步验证新规则，并提醒已导入的旧节点需要重新导入。
+
 ## v26.7.17
 
 ### 主要变化

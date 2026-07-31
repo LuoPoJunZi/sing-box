@@ -9,6 +9,7 @@ sub_gen_sub() {
 
     local all_urls=""
     local config_count=0
+    local skipped_count=0
     local conf_files=()
     mapfile -t conf_files < <(list_conf_json_names '.json$')
 
@@ -21,8 +22,14 @@ sub_gen_sub() {
             ((config_count++))
             msg "   $config_count. $is_config_name"
             all_urls+="${is_url}\n"
+        else
+            ((skipped_count++))
         fi
     done
+
+    if [[ $skipped_count -gt 0 ]]; then
+        warn "$skipped_count 个配置未生成分享链接（端口转发节点或证书指纹缺失）。"
+    fi
 
     if [[ $config_count -eq 0 ]]; then
         err "目前没有找到任何有效节点，请先添加配置后再生成订阅。"

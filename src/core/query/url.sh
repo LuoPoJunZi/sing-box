@@ -9,7 +9,7 @@ query_show_all_nodes() {
     ui_hr
     echo
 
-    local config_count=0
+    local config_count=0 url_count=0
     local conf_files=()
     mapfile -t conf_files < <(list_conf_json_names '.json$')
     for v in "${conf_files[@]}"; do
@@ -17,12 +17,15 @@ query_show_all_nodes() {
         unset is_protocol port uuid password net is_url custom_remark is_json_str
         get info "$v" > /dev/null 2>&1
         info "$v"
+        if [[ $is_url ]]; then ((url_count++)); fi
     done
 
     if [[ $config_count -eq 0 ]]; then
         echo -e " $(ui_error "目前没有找到任何节点配置，请先添加配置。")\n"
+    elif [[ $url_count -eq 0 ]]; then
+        echo -e " $(ui_error "未生成可分享的代理节点链接；如上方提示指纹缺失，请先修复。")\n"
     else
-        echo -e "\n $(ui_success "共为您列出 $config_count 个节点链接，请直接复制上方链接使用。")\n"
+        echo -e "\n $(ui_success "共为您列出 $url_count 个节点链接，请直接复制上方链接使用。")\n"
     fi
 
     is_show_all=
@@ -55,6 +58,6 @@ query_url_qr() {
             footer_msg
         fi
     else
-        if [[ $1 == 'url' ]]; then err "($is_config_name) 无法生成 URL 链接."; else err "($is_config_name) 无法生成 QR code 二维码."; fi
+        if [[ $1 == 'url' ]]; then err "($is_config_name) ${is_url_error:-无法生成 URL 链接.}"; else err "($is_config_name) ${is_url_error:-无法生成 QR code 二维码.}"; fi
     fi
 }

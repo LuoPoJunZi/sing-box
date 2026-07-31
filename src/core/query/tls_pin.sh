@@ -49,9 +49,21 @@ query_tls_pin_print_value() {
 }
 
 query_tls_pin_print_header() {
+    local profile=$1
+
     msg "------------- 客户端兼容说明 -------------"
-    msg "$(ui_success "[固定指纹]") 分享链接已携带证书指纹，适配新版 v2rayN / Xray。"
-    msg "$(ui_warn "[旧版兼容]") 链接仍携带 insecure=1，未识别指纹字段的客户端会继续按旧方式导入。"
+    msg "$(ui_success "[固定指纹]") 分享链接已携带当前协议可识别的证书指纹。"
+    case $profile in
+        hysteria2)
+            msg "$(ui_warn "[协议要求]") Hysteria2 官方自签证书格式使用 insecure=1 + pinSHA256；不要单独使用 insecure。"
+            ;;
+        tuic)
+            msg "$(ui_warn "[内核差异]") TUIC 通用链接保留 insecure=1 + pcs；sing-box 用户应按下方公钥指纹片段关闭 insecure。"
+            ;;
+        *)
+            msg "$(ui_success "[Xray迁移]") 链接使用 pcs 适配新版 v2rayN / Xray，不再携带 insecure/allowInsecure。"
+            ;;
+    esac
     msg "重新生成服务器证书后指纹会变化，请重新导入节点。"
 }
 
@@ -63,10 +75,10 @@ query_tls_pin_print_snippet() {
     if [[ $tls_pin_error ]]; then
         msg "------------- 客户端兼容说明 -------------"
         warn "[指纹缺失] $tls_pin_error"
-        warn "当前链接只能保留 insecure=1 兼容导入；修复证书或 openssl 后请重新导出。"
+        warn "已拒绝生成不验证证书的链接；修复证书或 openssl 后请重新导出。"
         return
     fi
-    query_tls_pin_print_header
+    query_tls_pin_print_header "$profile"
 
     case $profile in
         hysteria2)
@@ -99,7 +111,6 @@ query_tls_pin_print_snippet() {
             msg "Trojan / Xray 客户端 TLS 示例:"
             msg '"tlsSettings": {'
             msg "  \"serverName\": \"$server_name\","
-            msg '  "allowInsecure": false,'
             msg "  \"pinnedPeerCertSha256\": \"$tls_pin_cert_sha256_hex\""
             msg '}'
             msg "说明: 按项目约定继续使用无域名 / 自签证书；新版 v2rayN 会从 URL 的 pcs 读取固定指纹。"
@@ -109,7 +120,6 @@ query_tls_pin_print_snippet() {
             msg "VMess-QUIC / Xray 客户端 TLS 示例:"
             msg "\"tlsSettings\": {"
             msg "  \"serverName\": \"$server_name\","
-            msg "  \"allowInsecure\": false,"
             msg "  \"alpn\": [\"h3\"],"
             msg "  \"pinnedPeerCertSha256\": \"$tls_pin_cert_sha256_hex\""
             msg "}"

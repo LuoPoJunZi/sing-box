@@ -52,7 +52,8 @@ is_protocol=trojan
 net=trojan
 password='p@ss word'
 query_info
-[[ $is_url == *'insecure=1&allowInsecure=1&pcs='* ]] || fail "Trojan compatibility fields or pcs missing"
+[[ $is_url == *'pcs='* ]] || fail "Trojan pcs missing"
+[[ $is_url != *'insecure='* && $is_url != *'allowInsecure='* ]] || fail "Trojan still exports deprecated insecure fields"
 
 reset_case
 is_protocol=tuic
@@ -61,7 +62,8 @@ uuid='11111111-1111-1111-1111-111111111111'
 password='p@ss:word'
 query_info
 [[ $is_url == tuic://11111111-1111-1111-1111-111111111111%3Ap%40ss%3Aword@* ]] || fail "TUIC userinfo encoding failed"
-[[ $is_url == *'insecure=1&allow_insecure=1&pcs='*'&congestion_control=bbr'* ]] || fail "TUIC compatibility fields, pin, or congestion control missing"
+[[ $is_url == *'insecure=1&pcs='*'&congestion_control=bbr'* ]] || fail "TUIC compatibility fields, pin, or congestion control missing"
+[[ $is_url != *'allow_insecure='* && $is_url != *'allowInsecure='* ]] || fail "TUIC exports redundant allowInsecure aliases"
 
 reset_case
 is_protocol=vless
@@ -110,6 +112,22 @@ uuid='11111111-1111-1111-1111-111111111111'
 is_addr='[2001:db8::1]'
 query_info
 vmess_json=$(printf '%s' "${is_url#vmess://}" | base64 -d)
-jq -e '.add == "2001:db8::1" and .tls == "tls" and .sni == "2001:db8::1" and .insecure == "1" and (.pcs | test("^[0-9a-f]{64}$"))' <<< "$vmess_json" > /dev/null || fail "VMess-QUIC address or TLS pin fields missing"
+jq -e '.add == "2001:db8::1" and .tls == "tls" and .sni == "2001:db8::1" and (has("insecure") | not) and (.pcs | test("^[0-9a-f]{64}$"))' <<< "$vmess_json" > /dev/null || fail "VMess-QUIC address or TLS pin fields missing"
+
+reset_case
+is_protocol=trojan
+net=trojan
+password='safe-only'
+is_tls_cer="$tmp_dir/missing.cer"
+query_info
+[[ -z $is_url && $is_url_error == *'无法安全生成分享链接'* ]] || fail "missing pin must fail closed"
+
+msg() { printf '%s\n' "$*"; }
+warn() { printf '%s\n' "$*"; }
+ui_style() { printf '%s' "$2"; }
+footer_msg() { :; }
+is_dont_show_info=
+output=$(query_info 2>&1)
+[[ $output == *'无法安全生成分享链接'* ]] || fail "sb info must explain missing pin"
 
 echo "[share-output] ok"

@@ -102,11 +102,13 @@ sb status
 
 - VLESS/Reality, VMess, Trojan, Hysteria2, TUIC, Shadowsocks, and SOCKS exports consistently escape remarks, paths, and credentials.
 - Reality links include `sni`, `pbk`, `sid`, and `fp`; domain TLS links include an explicit SNI.
-- Hysteria2 uses the official `pinSHA256` field. Domainless/self-signed Trojan, TUIC, and VMess-QUIC exports include the v2rayN/Xray `pcs` certificate pin while retaining `insecure=1` for older importers.
-- Where sing-box has no common share-link field, `sb info <config>` prints a `certificate_public_key_sha256` client snippet.
+- Trojan and VMess-QUIC use only `pcs` for certificate pinning and no longer export `insecure/allowInsecure`.
+- Hysteria2 follows its official `insecure=1 + pinSHA256` format. The common TUIC link uses `insecure=1 + pcs`; neither is allowed without a certificate pin.
+- v2rayN currently does not map URI `pcs` to the sing-box public-key pin, so `sb info <config>` continues to print a secure `certificate_public_key_sha256` client snippet.
+- If the certificate fingerprint cannot be calculated, the script refuses to generate that node's URL, QR code, or subscription entry instead of falling back to unverified TLS.
 - Previously imported client profiles are not updated automatically. Run `sb url <config>` again or regenerate the subscription and re-import it after upgrading the script.
 
-The compatibility implementation follows [v2rayN 7.23.4](https://github.com/2dust/v2rayN/releases/tag/7.23.4), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
+The compatibility implementation follows the [v2rayN allowInsecure migration note](https://github.com/2dust/v2rayN/discussions/9460), [v2rayN 7.24.4](https://github.com/2dust/v2rayN/releases/tag/7.24.4), [Xray-core v26.2.6](https://github.com/XTLS/Xray-core/releases/tag/v26.2.6), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
 
 ---
 

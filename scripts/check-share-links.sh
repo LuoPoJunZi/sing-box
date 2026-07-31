@@ -29,4 +29,12 @@ grep -q 'query_uri_param pcs' src/core/query/info.sh || fail "Xray pcs export mi
 grep -q 'pcs:\$pcs' src/core/query/info.sh || fail "VMess pcs export missing"
 grep -q 'query_uri_param sid' src/core/query/info.sh || fail "Reality sid export missing"
 
+if grep -Eq 'query_uri_param allowInsecure|query_uri_param allow_insecure|insecure:\"1\"' src/core/query/info.sh; then
+    fail "deprecated Xray allowInsecure export remains"
+fi
+
+if grep -q '"allowInsecure":' src/core/query/tls_pin.sh; then
+    fail "deprecated allowInsecure remains in client snippets"
+fi
+
 echo "[share-links] ok"

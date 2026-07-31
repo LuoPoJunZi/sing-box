@@ -296,22 +296,23 @@ runtime_doctor_client_compat() {
         fi
     fi
     if [[ $trojan_count -gt 0 ]]; then
-        runtime_doctor_info "Trojan: $trojan_count 个无域名/自签证书节点使用 insecure=1 + pcs"
+        runtime_doctor_info "Trojan: $trojan_count 个无域名/自签证书节点只使用 pcs，不再下发 insecure/allowInsecure"
         msg "  - Trojan: $(runtime_doctor_join_limited 6 "${trojan_items[@]}")"
     fi
     if [[ $pinned_count -gt 0 ]]; then
         if [[ $hysteria2_count -gt 0 ]]; then
             msg "  - Hysteria2: $(runtime_doctor_join_limited 6 "${hysteria2_items[@]}")"
-            msg "    导出: 官方 pinSHA256；自签证书保留 insecure=1"
+            msg "    导出: 官方要求 insecure=1 + pinSHA256；禁止缺少 pinSHA256 的单独 insecure"
         fi
         if [[ $tuic_count -gt 0 ]]; then
             msg "  - TUIC: $(runtime_doctor_join_limited 6 "${tuic_items[@]}")"
-            msg "    导出: v2rayN/Xray 使用 pcs；sing-box 使用配置片段中的公钥指纹"
+            msg "    导出: 通用 URI 使用 insecure=1 + pcs；sing-box 应按 sb info 的公钥指纹片段关闭 insecure"
         fi
         if [[ $vmess_quic_count -gt 0 ]]; then
             msg "  - VMess-QUIC: $(runtime_doctor_join_limited 6 "${vmess_quic_items[@]}")"
-            msg "    导出: VMess JSON 携带 pcs；长期仍建议迁移到 Reality/CFtunnel"
+            msg "    导出: VMess JSON 只携带 pcs，不再下发 insecure；长期仍建议迁移到 Reality/CFtunnel"
         fi
+        runtime_doctor_ok "Xray 迁移: Trojan/VMess-QUIC 已使用 pcs 替代 allowInsecure"
         runtime_doctor_info "已导入客户端的旧节点不会自动更新，请重新运行 sb url <配置名> 并重新导入"
     else
         runtime_doctor_ok "证书固定: 未发现需要自签证书分享指纹的节点"

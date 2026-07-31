@@ -56,7 +56,7 @@ info_list=(
     "指纹 (Fingerprint)"
     "公钥 (Public key)"
     "用户名 (Username)"
-    "跳过证书验证 (allowInsecure)"
+    "跳过证书验证 (insecure)"
     "拥塞控制算法 (congestion_control)"
     "Reality Short ID"
 )
