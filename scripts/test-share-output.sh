@@ -54,6 +54,7 @@ password='p@ss word'
 query_info
 [[ $is_url == *'pcs='* ]] || fail "Trojan pcs missing"
 [[ $is_url != *'insecure='* && $is_url != *'allowInsecure='* ]] || fail "Trojan still exports deprecated insecure fields"
+[[ ${is_info_str[3]} == 'p@ss word' && ${#is_info_str[@]} -eq 7 ]] || fail "Trojan info fields split on whitespace"
 
 reset_case
 is_protocol=tuic
@@ -84,6 +85,19 @@ host='proxy.example.com'
 path='/ws path'
 query_info
 [[ $is_url == *'sni=proxy.example.com&host=proxy.example.com&path=%2Fws%20path'* ]] || fail "domain TLS fields missing"
+[[ ${is_info_str[6]} == '/ws path' && ${#is_info_str[@]} -eq 8 ]] || fail "domain TLS info fields split on whitespace"
+
+reset_case
+is_protocol=vless
+net=reality
+uuid='11111111-1111-1111-1111-111111111111'
+is_servername='www.microsoft.com'
+is_public_key='public+/key='
+is_short_id='1a2b3c4d'
+net_type=http
+is_new_protocol=VLESS-HTTP2-REALITY
+query_info
+[[ ${#is_info_show[@]} -eq 10 && ${#is_info_str[@]} -eq 10 && ${is_info_str[4]} == h2 ]] || fail "Reality-H2 info fields misaligned"
 
 reset_case
 is_protocol=shadowsocks

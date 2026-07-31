@@ -1,3 +1,5 @@
+#!/bin/bash
+
 firewall_allow() {
     local target_port=$1
     if [[ -z "$target_port" ]]; then

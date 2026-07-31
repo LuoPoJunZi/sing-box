@@ -1,3 +1,5 @@
+#!/bin/bash
+
 admin_uninstall_manifest_path() {
     echo "$is_sh_dir/.install_manifest"
 }

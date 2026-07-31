@@ -28,7 +28,7 @@ query_info() {
         is_value_style=$magenta
         is_can_change=(0 2 5)
         is_info_show=(0 1 2 3 4 6 7 8)
-        is_info_str=(vless "$host" "443" $uuid ws "$host" "$path" tls)
+        is_info_str=(vless "$host" 443 "$uuid" ws "$host" "$path" tls)
         query_uri_params_reset
         query_uri_param encryption none
         query_uri_param security tls
@@ -69,18 +69,19 @@ query_info() {
                     is_url="$is_protocol://$(query_uri_encode "$uuid")@$is_addr:$is_https_port${uri_query}#$encoded_remark"
                 fi
                 if [[ $is_caddy ]]; then is_can_change+=(11); fi
-                is_info_str=($is_protocol $is_addr $is_https_port $uuid $net $host $path 'tls')
+                is_info_str=("$is_protocol" "$is_addr" "$is_https_port" "$uuid" "$net" "$host" "$path" tls)
             else
                 is_type=none
                 is_can_change=(0 1 5)
                 is_info_show=(0 1 2 3 4)
-                is_info_str=($is_protocol $is_addr $port $uuid $net)
+                is_info_str=("$is_protocol" "$is_addr" "$port" "$uuid" "$net")
                 if [[ $net == "http" ]]; then
                     net=tcp
                     is_type=http
                     is_tcp_http=1
                     is_info_show+=(5)
-                    is_info_str=(${is_info_str[@]/http/tcp http})
+                    is_info_str[4]=tcp
+                    is_info_str+=(http)
                 fi
                 if [[ $net == "quic" ]]; then
                     is_tls_pin_profile=vmess-quic
@@ -102,7 +103,7 @@ query_info() {
             is_info_show=(0 1 2 10 11)
             encoded_user=$(query_uri_base64url "${ss_method}:${ss_password}")
             is_url="ss://${encoded_user}@${is_addr}:${port}#$encoded_remark"
-            is_info_str=($is_protocol $is_addr $port $ss_password $ss_method)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$ss_password" "$ss_method")
             ;;
         trojan)
             is_tls_pin_profile=trojan-self-signed
@@ -117,7 +118,7 @@ query_info() {
             query_uri_param pcs "$tls_pin_cert_sha256_hex"
             uri_query=$(query_uri_query)
             is_url="$is_protocol://$(query_uri_encode "$password")@$is_addr:$port${uri_query}#$encoded_remark"
-            is_info_str=($is_protocol $is_addr $port $password tcp tls false)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$password" tcp tls false)
             ;;
         hy*)
             is_tls_pin_profile=hysteria2
@@ -132,7 +133,7 @@ query_info() {
             query_uri_param pinSHA256 "$tls_pin_cert_sha256_hex"
             uri_query=$(query_uri_query)
             is_url="$is_protocol://$(query_uri_encode "$password")@$is_addr:$port/${uri_query}#$encoded_remark"
-            is_info_str=($is_protocol $is_addr $port $password tls h3 true)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$password" tls h3 true)
             ;;
         tuic)
             is_insecure=1
@@ -150,7 +151,7 @@ query_info() {
             uri_query=$(query_uri_query)
             encoded_user=$(query_uri_encode "$uuid:$password")
             is_url="$is_protocol://${encoded_user}@$is_addr:$port${uri_query}#$encoded_remark"
-            is_info_str=($is_protocol $is_addr $port $uuid $password tls h3 true bbr)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$uuid" "$password" tls h3 true bbr)
             ;;
         reality)
             is_value_style=$magenta
@@ -161,9 +162,11 @@ query_info() {
             if [[ $net_type =~ "http" || ${is_new_protocol,,} =~ "http" ]]; then
                 is_flow=
                 is_net_type=h2
-                is_info_show=(${is_info_show[@]/15/})
+                is_info_show=(0 1 2 3 4 8 16 17 18)
+                is_info_str=("$is_protocol" "$is_addr" "$port" "$uuid" "$is_net_type" reality "$is_servername" chrome "$is_public_key")
+            else
+                is_info_str=("$is_protocol" "$is_addr" "$port" "$uuid" "$is_flow" "$is_net_type" reality "$is_servername" chrome "$is_public_key")
             fi
-            is_info_str=($is_protocol $is_addr $port $uuid $is_flow $is_net_type reality $is_servername chrome $is_public_key)
             if [[ $is_short_id ]]; then
                 is_info_show+=(22)
                 is_info_str+=("$is_short_id")
@@ -183,12 +186,12 @@ query_info() {
         direct)
             is_can_change=(0 1 7 8)
             is_info_show=(0 1 2 13 14)
-            is_info_str=($is_protocol $is_addr $port $door_addr $door_port)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$door_addr" "$door_port")
             ;;
         socks)
             is_can_change=(0 1 12 4)
             is_info_show=(0 1 2 19 10)
-            is_info_str=($is_protocol $is_addr $port $is_socks_user $is_socks_pass)
+            is_info_str=("$is_protocol" "$is_addr" "$port" "$is_socks_user" "$is_socks_pass")
             encoded_user=$(query_uri_base64url "${is_socks_user}:${is_socks_pass}")
             is_url="socks://${encoded_user}@${is_addr}:${port}#$encoded_remark"
             ;;

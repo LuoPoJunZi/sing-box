@@ -1,5 +1,7 @@
+#!/bin/bash
+
 install_cloudflared() {
-    if [[ ! $(type -P cloudflared) ]]; then
+    if ! command -v cloudflared > /dev/null 2>&1; then
         msg "正在下载并安装 Cloudflare Tunnel (cloudflared)..."
         local cf_arch="amd64"
         if [[ $(uname -m) =~ "aarch64" || $(uname -m) =~ "armv8" ]]; then

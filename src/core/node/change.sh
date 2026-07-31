@@ -66,10 +66,10 @@ write_change() {
     snapshot_ensure "write-change"
 
     case $is_change_id in
-        full) add $net ${@:3} ;;
+        full) add "$net" "${@:3}" ;;
         0)
             is_set_new_protocol=1
-            add ${@:3}
+            add "${@:3}"
             ;;
         1)
             write_change_port_action "$@"

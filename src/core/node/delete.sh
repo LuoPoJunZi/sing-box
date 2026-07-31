@@ -18,7 +18,7 @@ write_del() {
             msg "\n$(ui_danger_text "即将删除配置文件"): $is_config_file"
             pause
         fi
-        rm -rf -- "$is_conf_dir/$is_config_file"
+        rm -f -- "${is_conf_dir:?}/$is_config_file"
 
         if [[ $is_config_file =~ "CFtunnel" ]]; then
             if [[ $port ]]; then
@@ -45,7 +45,7 @@ write_del() {
                 fi
                 is_del_host=$old_host
             fi
-            if [[ $is_del_host && $host != $old_host && -f $is_caddy_conf/$is_del_host.conf ]]; then
+            if [[ $is_del_host && $host != "$old_host" && -f $is_caddy_conf/$is_del_host.conf ]]; then
                 rm -rf -- "$is_caddy_conf/$is_del_host.conf" "$is_caddy_conf/$is_del_host.conf.add"
                 if [[ ! $is_new_json ]]; then
                     manage restart caddy &

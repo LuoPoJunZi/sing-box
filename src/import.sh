@@ -1,3 +1,5 @@
+#!/bin/bash
+
 is_xray_sh=/etc/xray/sh/src/core.sh
 is_v2ray_sh=/etc/v2ray/sh/src/core.sh
 is_xray_conf=/etc/xray/conf
@@ -13,10 +15,10 @@ in_conf() {
     mapfile -t conf_items < <(sed 's/""/null/g;s/"//g' <<< "$is_conf_args")
     for v in "${conf_items[@]}"; do
         ((i++))
-        export ${is_up_var_set[$i]}="${v}"
+        export "${is_up_var_set[$i]}=${v}"
     done
     for v in "${is_up_var_set[@]}"; do
-        [[ ${!v} == 'null' ]] && unset $v
+        [[ ${!v} == 'null' ]] && unset "$v"
     done
 
     path="${ws_path}${h2_path}"
@@ -28,7 +30,7 @@ in_conf() {
             tmp_tlsport=$(grep -E -o "$host:[1-9][0-9]?+" $is_caddy_conf/$host.conf | sed s/.*://)
         fi
         [[ $tmp_tlsport ]] && https_port=$tmp_tlsport
-        add $is_protocol-$net-tls
+        add "$is_protocol-$net-tls"
     else
         case $is_protocol in
             vmess | vless)
@@ -37,14 +39,14 @@ in_conf() {
                     is_tips_msg="新配置文件名: (VMess-HTTP-$port.json)"
                 }
                 [[ $is_reality == "reality" ]] && net=reality
-                add $net
+                add "$net"
                 ;;
             dokodemo-door)
                 add door
                 is_tips_msg="新配置文件名: (Direct-$port.json)"
                 ;;
             *socks*)
-                add $is_protocol
+                add "$is_protocol"
                 ;;
             *)
                 is_not_in_conf=1
@@ -67,13 +69,14 @@ if [[ -f $is_v2ray_sh && -d $is_v2ray_conf ]]; then
     is_list+=("${is_v2ray_list[@]}")
 fi
 
-[[ ${is_list[@]} =~ "xray" ]] && is_xray_in=1
-[[ ${is_list[@]} =~ "v2ray" ]] && is_v2ray_in=1
+is_list_text="${is_list[*]}"
+[[ $is_list_text == *xray* ]] && is_xray_in=1
+[[ $is_list_text == *v2ray* ]] && is_v2ray_in=1
 
 [[ $is_xray_in ]] && xray stop > /dev/null 2>&1
 [[ $is_v2ray_in ]] && v2ray stop > /dev/null 2>&1
 
-if [[ ${is_list[@]} ]]; then
+if [[ ${#is_list[@]} -gt 0 ]]; then
     msg "开始导入配置..."
     for i in "${is_list[@]}"; do
         in_conf "$i" &
@@ -83,7 +86,7 @@ if [[ ${is_list[@]} ]]; then
     manage restart &
     [[ $is_xray_in ]] && xray restart > /dev/null 2>&1 &
     [[ $is_v2ray_in ]] && v2ray restart > /dev/null 2>&1 &
-    [[ ${is_list[@],,} =~ "tls" && $is_caddy ]] && manage restart caddy &
+    [[ ${is_list_text,,} == *tls* && $is_caddy ]] && manage restart caddy &
 else
     err "没有找到可导入的配置..."
 fi

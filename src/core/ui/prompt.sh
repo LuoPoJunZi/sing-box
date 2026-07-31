@@ -3,7 +3,7 @@
 ask() {
     case $1 in
         set_ss_method)
-            is_tmp_list=(${ss_method_list[@]})
+            is_tmp_list=("${ss_method_list[@]}")
             is_default_arg=$is_random_ss_method
             is_opt_msg="\n请选择加密方式:"
             is_opt_input_msg="➡️ 请选择 $(ui_key "(输入 0 返回主面板，默认 $is_default_arg)"): "
@@ -35,7 +35,7 @@ ask() {
             ;;
         set_change_list)
             is_tmp_list=()
-            for v in ${is_can_change[@]}; do
+            for v in "${is_can_change[@]}"; do
                 is_tmp_list+=("${change_list[$v]}")
             done
             is_opt_msg="\n请选择更改:"
@@ -49,7 +49,7 @@ ask() {
         list)
             is_ask_set=$2
             if [[ -n ${3:-} ]]; then
-                is_tmp_list=($3)
+                read -r -a is_tmp_list <<< "$3"
             elif [[ ${#is_tmp_list[@]} -eq 0 ]]; then
                 unset is_tmp_list
             fi
@@ -75,13 +75,13 @@ ask() {
     if [[ $is_opt_msg ]]; then
         msg "$is_opt_msg"
     fi
-    if [[ $is_tmp_list ]]; then
+    if [[ ${#is_tmp_list[@]} -gt 0 ]]; then
         show_list "${is_tmp_list[@]}"
     fi
 
     while :; do
         echo -ne "$is_opt_input_msg"
-        read REPLY
+        read -r REPLY
 
         if [[ "$REPLY" == "0" ]]; then
             echo
@@ -95,7 +95,8 @@ ask() {
             exit
         fi
         if [[ ! $REPLY && $is_default_arg ]]; then
-            export $is_ask_set=$is_default_arg
+            printf -v "$is_ask_set" '%s' "$is_default_arg"
+            export "${is_ask_set?}"
             break
         fi
         if [[ ! $REPLY && ! $is_default_arg && ! $is_emtpy_exit ]]; then
@@ -104,10 +105,11 @@ ask() {
 
         if [[ $1 == "set_protocol" ]]; then
             if [[ "$REPLY" =~ ^([1-9]|1[0-9]|2[0-2])$ ]]; then
-                export $is_ask_set="${protocol_list[$REPLY - 1]}"
+                printf -v "$is_ask_set" '%s' "${protocol_list[$REPLY - 1]}"
+                export "${is_ask_set?}"
                 break
             fi
-        elif [[ ! $is_tmp_list ]]; then
+        elif [[ ${#is_tmp_list[@]} -eq 0 ]]; then
             if [[ $(grep port <<< $is_ask_set) ]]; then
                 if [[ ! $(is_test port "$REPLY") ]]; then
                     msg "$is_err 请输入正确的端口, 可选(1-65535)"
@@ -140,7 +142,8 @@ ask() {
                 continue
             fi
             if [[ $REPLY ]]; then
-                export $is_ask_set=$REPLY
+                printf -v "$is_ask_set" '%s' "$REPLY"
+                export "${is_ask_set?}"
                 msg "使用: ${!is_ask_set}"
                 break
             fi
@@ -149,7 +152,8 @@ ask() {
                 is_ask_result=${is_tmp_list[$REPLY - 1]}
             fi
             if [[ $is_ask_result ]]; then
-                export $is_ask_set="$is_ask_result"
+                printf -v "$is_ask_set" '%s' "$is_ask_result"
+                export "${is_ask_set?}"
                 msg "选择: ${!is_ask_set}"
                 break
             fi

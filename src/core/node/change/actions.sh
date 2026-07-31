@@ -19,7 +19,7 @@ write_change_key_action() {
         if [[ $is_new_private_key && ! $is_new_public_key ]]; then err "无法找到 Public key."; fi
         if [[ ! $is_new_private_key ]]; then ask string is_new_private_key "请输入新 Private key"; fi
         if [[ ! $is_new_public_key ]]; then ask string is_new_public_key "请输入新 Public key"; fi
-        if [[ $is_new_private_key == $is_new_public_key ]]; then err "Private key 和 Public key 不能一样."; fi
+        if [[ $is_new_private_key == "$is_new_public_key" ]]; then err "Private key 和 Public key 不能一样."; fi
         is_tmp_json=$is_conf_dir/$is_config_file-$uuid
         cp -f $is_conf_dir/$is_config_file $is_tmp_json
         sed -i s#$is_private_key #$is_new_private_key# $is_tmp_json

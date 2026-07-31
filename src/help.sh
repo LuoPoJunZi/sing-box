@@ -1,7 +1,9 @@
+#!/bin/bash
+
 show_help() {
     case $1 in
         api | x25519 | tls | run | uuid | version)
-            $is_core_bin help $1 ${@:2}
+            "$is_core_bin" help "$1" "${@:2}"
             ;;
         *)
             [[ $1 ]] && warn "未知选项 '$1'"

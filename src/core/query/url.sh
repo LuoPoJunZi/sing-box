@@ -48,7 +48,7 @@ query_url_qr() {
             link="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=$(query_uri_encode "$is_url")"
             msg "\n------------- $is_config_name & QR code 二维码 -------------"
             msg
-            if [[ $(type -P qrencode) ]]; then
+            if command -v qrencode > /dev/null 2>&1; then
                 qrencode -t ANSI "${is_url}"
             else
                 msg "请安装 qrencode: $(_green "$cmd update -y; $cmd install qrencode -y")"

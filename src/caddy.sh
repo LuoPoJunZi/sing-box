@@ -1,3 +1,5 @@
+#!/bin/bash
+
 caddy_config() {
     is_caddy_site_file=$is_caddy_conf/${host}.conf
     case $1 in

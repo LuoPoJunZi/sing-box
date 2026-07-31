@@ -42,7 +42,7 @@ fi
 ui_style() {
     local style=$1
     shift
-    echo -e "${style}$*${none}"
+    printf '%b\n' "${style}$*${none}"
 }
 
 ui_brand() { ui_style "$cyan" "$@"; }
@@ -77,13 +77,13 @@ is_err=$(ui_err_badge)
 is_warn=$(ui_warn_badge)
 
 err() {
-    echo -e "\n$is_err $@\n"
+    printf '\n%b %s\n\n' "$is_err" "$*"
     [[ $is_dont_auto_exit ]] && return
     exit 1
 }
 
 warn() {
-    echo -e "\n$is_warn $@\n"
+    printf '\n%b %s\n\n' "$is_warn" "$*"
 }
 
 # --- 2. 核心路径与环境变量 ---
@@ -110,9 +110,12 @@ is_http_port=80
 is_https_port=443
 
 # --- 3. 基础系统工具包装 ---
-load() { . "$is_sh_dir/src/$1"; }
+load() {
+    # shellcheck source=/dev/null
+    . "$is_sh_dir/src/$1"
+}
 _wget() { wget --no-check-certificate "$@"; }
-cmd=$(type -P apt-get || type -P yum || type -P zypper)
+cmd=$(command -v apt-get || command -v yum || command -v zypper)
 
 case $(uname -m) in
     amd64 | x86_64) is_arch="amd64" ;;

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 managed_record() {
     local item_type=$1 item_value=$2 item_extra=$3
     if [[ -n $is_sh_dir && -d $is_sh_dir ]]; then

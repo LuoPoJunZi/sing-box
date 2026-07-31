@@ -1,6 +1,8 @@
+#!/bin/bash
+
 install_service() {
     case $1 in
-        $is_core)
+        "$is_core")
             cat > /lib/systemd/system/$is_core.service <<< "
 [Unit]
 Description=$is_core_name Service

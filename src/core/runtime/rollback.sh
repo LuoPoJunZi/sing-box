@@ -1,19 +1,21 @@
 #!/bin/bash
 
 runtime_snapshot_restore() {
-    local backup_root target_id target_dir latest_id
+    local backup_root target_id target_dir
     local snapshot_items=()
     backup_root="$(runtime_snapshot_dir)"
     target_id="$1"
 
     if [[ ! -d $backup_root ]]; then
         err "未找到快照目录."
+        return 1
     fi
 
     if [[ ! $target_id ]]; then
-        mapfile -t snapshot_items < <(ls -1dt "$backup_root"/* 2> /dev/null | xargs -r -n 1 basename)
+        mapfile -t snapshot_items < <(runtime_snapshot_list_ids "$backup_root")
         if [[ ${#snapshot_items[@]} -eq 0 ]]; then
             err "没有可回滚的快照."
+            return 1
         fi
 
         if [[ $is_dont_auto_exit ]]; then
@@ -25,9 +27,24 @@ runtime_snapshot_restore() {
         fi
     fi
 
+    if [[ $target_id == */* || $target_id == *\\* || $target_id == '.' || $target_id == '..' ]]; then
+        err "快照 ID 无效: $target_id"
+        return 1
+    fi
+
     target_dir="$backup_root/$target_id"
     if [[ ! -d $target_dir ]]; then
         err "快照不存在: $target_id"
+        return 1
+    fi
+
+    if [[ -d $target_dir/conf && (! $is_conf_dir || $is_conf_dir == '/') ]]; then
+        err "拒绝清理不安全的节点目录: $is_conf_dir"
+        return 1
+    fi
+    if [[ $is_caddy && -d $target_dir/caddy-conf && (! $is_caddy_dir || $is_caddy_conf != "$is_caddy_dir/"* || $is_caddy_conf == "$is_caddy_dir/") ]]; then
+        err "拒绝清理不安全的 Caddy 目录: $is_caddy_conf"
+        return 1
     fi
 
     if [[ $is_dry_run ]]; then
@@ -57,7 +74,7 @@ runtime_snapshot_restore() {
 
     if [[ $is_caddy && -d $target_dir/caddy-conf ]]; then
         mkdir -p "$is_caddy_conf"
-        rm -rf -- "$is_caddy_conf"/*
+        rm -rf -- "${is_caddy_conf:?}/"*
         cp -rf -- "$target_dir/caddy-conf/." "$is_caddy_conf/"
     fi
 

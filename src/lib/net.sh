@@ -1,3 +1,5 @@
+#!/bin/bash
+
 get_ip() {
     if [[ $ip || $is_no_auto_tls || $is_gen || $is_dont_get_ip ]]; then
         return
@@ -19,7 +21,7 @@ get_port() {
             err "自动获取可用端口失败次数达到 233 次, 请检查端口占用情况."
         fi
         tmp_port=$(shuf -i 20000-65535 -n 1)
-        if [[ ! $(is_test port_used $tmp_port) && $tmp_port != $port ]]; then
+        if [[ ! $(is_test port_used "$tmp_port") && $tmp_port != "$port" ]]; then
             break
         fi
     done

@@ -25,9 +25,9 @@ query_get() {
             is_file_str=$2
             if [[ ! $is_file_str ]]; then is_file_str='.json$'; fi
             mapfile -t is_all_json < <(list_conf_json_names "$is_file_str")
-            if [[ ! $is_all_json ]]; then err "无法找到相关的配置文件: $2"; fi
+            if [[ ${#is_all_json[@]} -eq 0 ]]; then err "无法找到相关的配置文件: $2"; fi
             if [[ ${#is_all_json[@]} -eq 1 ]]; then
-                is_config_file=$is_all_json
+                is_config_file=${is_all_json[0]}
                 is_auto_get_config=1
             fi
             if [[ ! $is_config_file ]]; then
@@ -49,10 +49,10 @@ query_get() {
                 for v in "${json_items[@]}"; do
                     ((i++))
                     if [[ $is_debug ]]; then msg "$i-${is_up_var_set[$i]}: $v"; fi
-                    export ${is_up_var_set[$i]}="${v}"
+                    export "${is_up_var_set[$i]}=${v}"
                 done
-                for v in ${is_up_var_set[@]}; do
-                    if [[ ${!v} == 'null' ]]; then unset $v; fi
+                for v in "${is_up_var_set[@]}"; do
+                    if [[ ${!v} == 'null' ]]; then unset "$v"; fi
                 done
 
                 if [[ $is_private_key ]]; then
@@ -125,7 +125,7 @@ query_get() {
             if [[ ! $(pgrep -f $is_core_bin) ]]; then
                 _yellow "\n测试运行 $is_core_name ..\n"
                 manage start &> /dev/null
-                if [[ $is_run_fail == $is_core ]]; then
+                if [[ $is_run_fail == "$is_core" ]]; then
                     _red "$is_core_name 运行失败信息:"
                     $is_core_bin run -c $is_config_json -C $is_conf_dir
                 else

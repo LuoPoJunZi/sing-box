@@ -30,14 +30,14 @@ validate_is_test() {
 }
 
 validate_is_port_used() {
-    if [[ $(type -P netstat) ]]; then
+    if command -v netstat > /dev/null 2>&1; then
         if [[ ! $is_used_port ]]; then
             is_used_port="$(netstat -tunlp | sed -n 's/.*:\([0-9]\+\).*/\1/p' | sort -nu)"
         fi
         echo $is_used_port | sed 's/ /\n/g' | grep ^${1}$
         return
     fi
-    if [[ $(type -P ss) ]]; then
+    if command -v ss > /dev/null 2>&1; then
         if [[ ! $is_used_port ]]; then
             is_used_port="$(ss -tunlp | sed -n 's/.*:\([0-9]\+\).*/\1/p' | sort -nu)"
         fi

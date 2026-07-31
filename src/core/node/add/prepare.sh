@@ -47,8 +47,8 @@ write_add_apply_cli_args() {
         fi
         if [[ $is_use_method ]]; then
             is_tmp_use_name=加密方式
-            is_tmp_list=${ss_method_list[@]}
-            for v in ${is_tmp_list[@]}; do
+            is_tmp_list=("${ss_method_list[@]}")
+            for v in "${is_tmp_list[@]}"; do
                 if [[ $(grep -E -i "^${is_use_method}$" <<< $v) ]]; then
                     is_tmp_use_type=$v
                     break
@@ -57,7 +57,7 @@ write_add_apply_cli_args() {
             if [[ ! ${is_tmp_use_type} ]]; then
                 warn "(${is_use_method}) 不是一个可用的${is_tmp_use_name}."
                 msg "${is_tmp_use_name}可用如下: "
-                for v in ${is_tmp_list[@]}; do msg "\t\t$v"; done
+                for v in "${is_tmp_list[@]}"; do msg "\t\t$v"; done
                 msg "$is_err_tips\n"
                 exit 1
             fi
@@ -149,7 +149,7 @@ write_add_resolve_protocol() {
             trojan) is_new_protocol=Trojan ;;
             socks) is_new_protocol=Socks ;;
             *)
-                for v in ${protocol_list[@]}; do
+                for v in "${protocol_list[@]}"; do
                     if [[ $(grep -E -i "^$is_lower$" <<< $v) ]]; then
                         is_new_protocol=$v
                         break

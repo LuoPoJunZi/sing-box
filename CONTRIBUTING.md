@@ -12,7 +12,11 @@ Thanks for helping improve Sing-box-EV.
 ## Script Style
 
 - Target shell: `bash`.
+- Every `.sh` file must declare its Bash shebang, including sourced modules.
 - Prefer quoted variables (`"$var"`) unless intentional word splitting is required.
+- Forward arguments with `"$@"` or `"${@:N}"`, and iterate arrays with `"${array[@]}"`.
+- Prefer `command -v` for executable checks and `printf` for formatted output.
+- Use function-local variables for temporary state; shared runtime globals should be explicit.
 - Prefer explicit function boundaries and single responsibility per file/module.
 - Keep destructive operations (`rm -rf`, service stop/disable) guarded by clear conditions.
 
@@ -41,7 +45,10 @@ Admin layering rule:
 
 CI now runs:
 
-- `shellcheck`
+- `scripts/check-shell.sh` (warning-level ShellCheck; sourced modules only exclude cross-file global/source analysis rules)
+- `scripts/test-install-cli.sh`
+- `scripts/test-dispatch.sh`
+- `scripts/test-runtime-safety.sh`
 - `shfmt -d -i 4 -ci -sr`
 - `scripts/check-structure.sh`
 - `scripts/check-release.sh`
@@ -51,6 +58,7 @@ When preparing a public release, run `RELEASE_CHECK_STRICT_TAG=1 bash scripts/ch
 
 Local helper:
 
+- `bash scripts/check-shell.sh`
 - `bash scripts/lint.sh`
 - `bash scripts/smoke.sh`
 
@@ -60,4 +68,3 @@ Local helper:
 - Include test notes in PR description (what commands were verified).
 - For behavior changes, include before/after examples from CLI output.
 - For releases, update `src/init.sh` and add the matching `### 主要变化` section in `RELEASE_NOTES.md`.
-

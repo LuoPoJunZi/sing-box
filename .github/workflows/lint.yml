@@ -8,12 +8,16 @@ on:
       - "*.sh"
       - "src/**/*.sh"
       - "scripts/**/*.sh"
+      - ".editorconfig"
+      - "CONTRIBUTING.md"
       - ".github/workflows/lint.yml"
   pull_request:
     paths:
       - "*.sh"
       - "src/**/*.sh"
       - "scripts/**/*.sh"
+      - ".editorconfig"
+      - "CONTRIBUTING.md"
       - ".github/workflows/lint.yml"
   workflow_dispatch:
 
@@ -31,11 +35,16 @@ jobs:
           sudo apt-get install -y shellcheck
 
       - name: Run shellcheck
-        run: |
-          while IFS= read -r -d '' file; do
-            echo "shellcheck: $file"
-            shellcheck -S error -e SC2148,SC2068,SC2145,SC2199 "$file"
-          done < <(find . -type f -name "*.sh" -not -path "./.git/*" -print0)
+        run: bash scripts/check-shell.sh
+
+      - name: Test installer CLI
+        run: bash scripts/test-install-cli.sh
+
+      - name: Test command dispatch
+        run: bash scripts/test-dispatch.sh
+
+      - name: Test runtime safety
+        run: bash scripts/test-runtime-safety.sh
 
   shfmt:
     name: shfmt

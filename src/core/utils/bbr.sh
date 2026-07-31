@@ -12,8 +12,9 @@ _open_bbr() {
 }
 
 _try_enable_bbr() {
-    local _test1=$(uname -r | cut -d\. -f1)
-    local _test2=$(uname -r | cut -d\. -f2)
+    local _test1 _test2
+    _test1=$(uname -r | cut -d\. -f1)
+    _test2=$(uname -r | cut -d\. -f2)
     if [[ $_test1 -eq 4 && $_test2 -ge 9 ]] || [[ $_test1 -ge 5 ]]; then
         _open_bbr
     else

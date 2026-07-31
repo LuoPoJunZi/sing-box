@@ -4,7 +4,7 @@ is_log_level_list=(trace debug info warn error fatal panic none del)
 
 log_set() {
     if [[ $1 ]]; then
-        for v in ${is_log_level_list[@]}; do
+        for v in "${is_log_level_list[@]}"; do
             [[ $(grep -E -i "^${1,,}$" <<< $v) ]] && is_log_level_use=$v && break
         done
         [[ ! $is_log_level_use ]] && err "无法识别 log 参数."

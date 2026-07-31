@@ -1,3 +1,5 @@
+#!/bin/bash
+
 json_write_config() {
     local json_content=$1
     cat <<< "$json_content" > "$is_config_json"
