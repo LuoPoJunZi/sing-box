@@ -21,6 +21,15 @@ bash scripts/test-dispatch.sh
 echo "[lint] runtime safety"
 bash scripts/test-runtime-safety.sh
 
+echo "[lint] download security"
+bash scripts/test-download-security.sh
+
+echo "[lint] dns migration"
+bash scripts/test-dns-migration.sh
+
+echo "[lint] update transaction"
+bash scripts/test-update-transaction.sh
+
 echo "[lint] shfmt"
 shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts
 

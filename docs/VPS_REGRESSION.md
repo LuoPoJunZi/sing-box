@@ -137,7 +137,28 @@ Expected:
 - Uninstall preview lists planned directories, commands, services, tunnel artifacts, firewall ports, and install manifest status without prompting.
 - If a manifest exists, uninstall preview points users to `sb manifest list` for details.
 
-## 8. Complete Uninstall Checks
+## 8. Update Checks
+
+Before uninstalling, verify the update path on a disposable host that is one release behind when possible:
+
+```bash
+sb update core
+sb update sh
+sb update caddy          # only when Caddy is installed
+sb update cloudflared    # only when cloudflared is installed
+systemctl is-active sing-box
+sb doctor
+```
+
+Expected:
+
+- Downloads report SHA-256 verification before replacement.
+- The candidate core validates the current configuration before the running binary changes.
+- The service remains active after an update; a failed health check restores the previous binary and configuration.
+- Legacy `dns.servers[].address` entries are either reported by `doctor` or migrated only after candidate-core validation.
+- Script updates preserve the install manifest, snapshots, and Reality domain-pool data.
+
+## 9. Complete Uninstall Checks
 
 Only run on disposable test hosts:
 
@@ -159,7 +180,7 @@ Expected:
 - Script-created commands, services, configs, logs, cron entries, Caddy/CFtunnel artifacts, and tracked firewall rules are removed.
 - Local-only files outside the installation path are not touched.
 
-## 9. Result Template
+## 10. Result Template
 
 ```text
 Version:

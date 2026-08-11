@@ -84,7 +84,7 @@ sb status
 | `sb sub` | Generate subscription |
 | `sb all` | Print all node URLs |
 | `sb log` | Tail runtime logs |
-| `sb update` | Update core/script |
+| `sb update [core|sh|caddy|cloudflared] [ver]` | Safely update a component with automatic rollback |
 | `sb doctor` | Run system diagnostics (environment/colors/dependencies/services/ports/config/network/client compatibility) |
 | `sb dry-run <command> [args...]` | Preview command without applying writes/restarts |
 | `sb dry-run uninstall` | Preview the complete uninstall scope without deleting anything |
@@ -108,7 +108,14 @@ sb status
 - If the certificate fingerprint cannot be calculated, the script refuses to generate that node's URL, QR code, or subscription entry instead of falling back to unverified TLS.
 - Previously imported client profiles are not updated automatically. Run `sb url <config>` again or regenerate the subscription and re-import it after upgrading the script.
 
-The compatibility implementation follows the [v2rayN allowInsecure migration note](https://github.com/2dust/v2rayN/discussions/9460), [v2rayN 7.24.4](https://github.com/2dust/v2rayN/releases/tag/7.24.4), [Xray-core v26.2.6](https://github.com/XTLS/Xray-core/releases/tag/v26.2.6), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
+The compatibility implementation follows the [v2rayN allowInsecure migration note](https://github.com/2dust/v2rayN/discussions/9460), [v2rayN 7.24.6](https://github.com/2dust/v2rayN/releases/tag/7.24.6), [Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
+
+### 4.2 Secure Updates and sing-box 1.14 Readiness
+
+- Official components are downloaded from GitHub Releases and checked against each asset's SHA-256 digest. Missing or mismatched digests prevent replacement.
+- Core and Caddy candidates are validated against the current configuration before replacement, followed by a service health check and automatic rollback on failure.
+- Script updates preserve the install manifest, configuration snapshots, and Reality domain-pool data. cloudflared updates also check existing tunnel services.
+- `sb doctor` reports legacy `dns.servers[].address` entries. `sb update core` writes the modern format only after the candidate core validates the migrated configuration.
 
 ---
 
@@ -143,6 +150,7 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
    ├─ import.sh                       # external configuration import
    ├─ lib                             # shared libraries used by installer and runtime
    │  ├─ crypto.sh                    # UUID and Reality keypair helpers
+   │  ├─ download.sh                  # GitHub Release metadata and SHA-256 verification
    │  ├─ firewall.sh                  # firewall port tracking and cleanup
    │  ├─ fs.sh                        # safe file/dir operations and manifest helpers
    │  ├─ json.sh                      # jq writes and config validation helpers
@@ -156,7 +164,7 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
       │  ├─ menu.sh                   # main menu rendering and input
       │  ├─ menu_actions.sh           # menu choice to command mapping
       │  ├─ uninstall.sh              # complete uninstall flow
-      │  └─ update.sh                 # core/script/caddy update flow
+      │  └─ update.sh                 # transactional core/script/caddy/cloudflared updates
       ├─ domain
       │  ├─ cli.sh                    # sb domain subcommands
       │  ├─ health.sh                 # DNS/TCP/TLS health checks and cache
@@ -392,6 +400,7 @@ For built-in domains, this writes to disable list without source edits.
 ## 12. Security and Ops Reminders
 
 - Do not run unknown scripts on production hosts
+- Keep HTTPS certificate validation and SHA-256 verification enabled for official component downloads; do not restore `--no-check-certificate`
 - Double-check changes touching `rm -rf`, `systemctl disable`, or `crontab -`
 - In PRs, include risk and rollback notes for operational changes
 

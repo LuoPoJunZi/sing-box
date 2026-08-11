@@ -83,7 +83,7 @@ sb status   # 查看运行状态
 | `sb sub` | 生成订阅 |
 | `sb all` | 列出所有节点链接 |
 | `sb log` | 查看日志 |
-| `sb update` | 更新核心/脚本 |
+| `sb update [core|sh|caddy|cloudflared] [ver]` | 安全更新组件，失败自动回滚 |
 | `sb doctor` | 系统诊断（环境/颜色/依赖/服务/端口/配置/网络/客户端兼容） |
 | `sb dry-run <command> [args...]` | 预演命令，不执行写入/重启 |
 | `sb dry-run uninstall` | 预览完全卸载范围，不执行删除 |
@@ -107,7 +107,14 @@ sb status   # 查看运行状态
 - 如果证书指纹无法计算，脚本会拒绝生成该节点的 URL、二维码和订阅条目，不会退回到不验证证书。
 - 脚本更新后，客户端中已经导入的旧节点不会自动刷新；请重新运行 `sb url <配置名>` 或重新生成订阅后导入。
 
-兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.4](https://github.com/2dust/v2rayN/releases/tag/7.24.4)、[Xray-core v26.2.6](https://github.com/XTLS/Xray-core/releases/tag/v26.2.6)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
+兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.6](https://github.com/2dust/v2rayN/releases/tag/7.24.6)、[Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
+
+### 4.2 安全更新与 sing-box 1.14 兼容
+
+- 官方组件从 GitHub Release 下载，并校验 Release 资源的 SHA-256；校验值缺失或不匹配时不会替换本机文件。
+- 核心和 Caddy 更新会先校验候选文件及现有配置，替换后检查服务状态，异常时自动恢复旧版本。
+- 脚本更新会保留安装清单、配置快照和 Reality 域名池数据；cloudflared 更新后会检查已有隧道服务。
+- 如果主配置仍使用旧版 `dns.servers[].address`，`sb doctor` 会提示；`sb update core` 只会在候选核心验证迁移结果后写入新格式。
 
 ---
 
@@ -142,6 +149,7 @@ sb status   # 查看运行状态
    ├─ import.sh                       # 外部配置导入逻辑
    ├─ lib                             # 跨安装期和运行期复用的公共库
    │  ├─ crypto.sh                    # UUID、Reality keypair 等生成辅助
+   │  ├─ download.sh                  # GitHub Release 元数据与 SHA-256 下载校验
    │  ├─ firewall.sh                  # 防火墙端口记录与清理
    │  ├─ fs.sh                        # 文件/目录安全操作与清单记录
    │  ├─ json.sh                      # jq 写入、配置校验辅助
@@ -155,7 +163,7 @@ sb status   # 查看运行状态
       │  ├─ menu.sh                   # 主菜单展示和输入
       │  ├─ menu_actions.sh           # 菜单选项到命令的映射
       │  ├─ uninstall.sh              # 完全卸载流程
-      │  └─ update.sh                 # core/script/caddy 更新
+      │  └─ update.sh                 # core/script/caddy/cloudflared 事务更新
       ├─ domain
       │  ├─ cli.sh                    # sb domain 子命令
       │  ├─ health.sh                 # DNS/TCP/TLS 健康检查和缓存
@@ -400,6 +408,7 @@ sb domain del example.com
 ## 12. 安全与运维提醒
 
 - 生产机不要随意执行来源不明脚本
+- 官方组件下载必须保留 HTTPS 证书验证和 SHA-256 校验，不要恢复 `--no-check-certificate`
 - 改动涉及 `rm -rf`、`systemctl disable`、`crontab -` 时必须二次确认
 - 提交 PR 前请说明风险和回滚方式
 

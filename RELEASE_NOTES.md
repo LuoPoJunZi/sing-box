@@ -1,5 +1,15 @@
 # Release Notes
 
+## v26.8.11
+
+### 主要变化
+
+- 安装器和运行期下载统一启用 HTTPS 证书验证，并按 GitHub Release 提供的 SHA-256 摘要校验 sing-box、脚本、Caddy 与 cloudflared；校验失败时拒绝安装。
+- 新安装缺少 jq 时改用经过固定哈希校验的 jq 1.8.2，脚本安装包改为正式 Release 的 `code.tar.gz`，不再直接获取变化中的 `main` 分支压缩包。
+- `sb update` 增加候选版本检查、服务健康检查和失败自动回滚，并支持更新 cloudflared；核心升级会先用新核心校验现有配置。
+- 为 sing-box 1.14 的 DNS 变更增加兼容预检：发现旧版 `dns.servers[].address` 时先生成 `type/server` 配置，只有新核心校验通过才写入。
+- `sb doctor` 增加 SHA-256 工具、jq 版本和旧 DNS 格式诊断；GitHub Actions 升级并固定到明确提交，Release 改用 GitHub CLI 原生发布。
+
 ## v26.7.31
 
 ### 主要变化

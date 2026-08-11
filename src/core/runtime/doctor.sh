@@ -422,7 +422,8 @@ runtime_doctor() {
     local host_ip="" host_ip6="" dns_test=""
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
-    local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0
+    local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0 warn_legacy_dns=0
+    local jq_version="" legacy_dns_count=0
 
     msg "\n============= 系统诊断 (doctor) ============="
 
@@ -437,8 +438,15 @@ runtime_doctor() {
     runtime_doctor_cmd tar
     runtime_doctor_cmd jq
     runtime_doctor_cmd openssl
+    runtime_doctor_cmd sha256sum
     if ! command -v jq > /dev/null 2>&1; then
         warn_jq=1
+    else
+        jq_version=$(jq --version 2> /dev/null | sed 's/^jq-//')
+        if [[ $jq_version && $(printf '%s\n' "$jq_version" 1.8.2 | sort -V | head -n 1) != 1.8.2 ]]; then
+            runtime_doctor_warn "jq 版本偏旧: $jq_version，建议升级到 1.8.2 或更高版本"
+            warn_jq_version=1
+        fi
     fi
     if command -v ss > /dev/null 2>&1; then
         runtime_doctor_ok "依赖可用: ss ($(command -v ss))"
@@ -458,6 +466,15 @@ runtime_doctor() {
 
     if [[ -f $is_config_json ]]; then
         runtime_doctor_ok "主配置存在: $is_config_json"
+        if command -v jq > /dev/null 2>&1; then
+            legacy_dns_count=$(dns_legacy_server_count "$is_config_json")
+            if [[ $legacy_dns_count -gt 0 ]]; then
+                runtime_doctor_warn "DNS 配置仍使用旧版 address 字段 ($legacy_dns_count 项)，升级 sing-box 1.14 前需要迁移"
+                warn_legacy_dns=1
+            else
+                runtime_doctor_ok "DNS 配置格式: 未发现已废弃的 address 字段"
+            fi
+        fi
     else
         runtime_doctor_fail "主配置缺失: $is_config_json"
         fail_config=1
@@ -593,6 +610,12 @@ runtime_doctor() {
         fi
         if [[ $warn_jq -eq 1 ]]; then
             msg "9) jq 缺失会影响 JSON 读写：请安装 jq 后再执行配置修改"
+        fi
+        if [[ $warn_jq_version -eq 1 ]]; then
+            msg "10) jq 版本偏旧：请通过系统包管理器升级，或重新安装脚本以获取已校验的 jq 1.8.2"
+        fi
+        if [[ $warn_legacy_dns -eq 1 ]]; then
+            msg "11) 旧版 DNS 配置：可先执行 sb dns 重新选择 DNS；sb update core 也会在候选核心校验通过后自动迁移"
         fi
         msg "----------------------------------------"
     fi

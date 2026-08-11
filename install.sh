@@ -75,7 +75,6 @@ warn() {
 }
 
 cmd=
-is_wget=
 is_arch=
 
 check_environment() {
@@ -88,7 +87,6 @@ check_environment() {
         err "此系统缺少 ${yellow}(systemctl)${none}, 请尝试执行:${yellow} ${cmd} update -y;${cmd} install systemd -y ${none}来修复此错误."
     fi
 
-    is_wget=$(command -v wget || true)
     case $(uname -m) in
         amd64 | x86_64) is_arch=amd64 ;;
         *aarch64* | *armv8*) is_arch=arm64 ;;
@@ -149,7 +147,7 @@ load() {
 }
 
 _wget() {
-    wget --no-check-certificate "$@"
+    wget "$@"
 }
 
 msg() {
@@ -206,39 +204,133 @@ install_pkg() {
     fi
 }
 
+installer_sha256_file() {
+    sha256sum "$1" | awk '{print tolower($1)}'
+}
+
+installer_verify_sha256() {
+    local file=$1 expected=${2#sha256:} actual=""
+
+    [[ $expected =~ ^[0-9a-fA-F]{64}$ ]] || return 1
+    actual=$(installer_sha256_file "$file") || return 1
+    [[ $actual == "${expected,,}" ]]
+}
+
+installer_download_verified() {
+    local url=$1 expected=$2 destination=$3 name=$4
+
+    [[ $url == https://* ]] || return 1
+    msg warn "下载并校验 ${name} > ${url}"
+    if ! _wget -t 5 -q -T 60 "$url" -O "$destination"; then
+        rm -f -- "$destination"
+        return 1
+    fi
+    if ! installer_verify_sha256 "$destination" "$expected"; then
+        rm -f -- "$destination"
+        msg err "${name} 的 SHA-256 校验失败，已拒绝使用该文件."
+        return 1
+    fi
+}
+
+installer_release_download() {
+    local repo=$1 tag=$2 asset=$3 destination=$4 name=$5
+    local endpoint metadata fields url digest
+
+    if [[ $tag != latest && ! $tag =~ ^v?[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+        return 1
+    fi
+    if [[ $tag == latest ]]; then
+        endpoint="https://api.github.com/repos/${repo}/releases/latest"
+    else
+        endpoint="https://api.github.com/repos/${repo}/releases/tags/${tag}"
+    fi
+    metadata="$tmpdir/release-${RANDOM}.json"
+    if ! _wget -q -t 5 -T 30 "$endpoint" -O "$metadata"; then
+        rm -f -- "$metadata"
+        return 1
+    fi
+    if ! "$json_tool" -e '.tag_name and (.assets | type == "array")' "$metadata" > /dev/null 2>&1; then
+        rm -f -- "$metadata"
+        return 1
+    fi
+    fields=$("$json_tool" -r --arg name "$asset" '
+        first(.assets[] | select(.name == $name)) |
+        select(.browser_download_url != null) |
+        [.browser_download_url, (.digest // "")] | @tsv
+    ' "$metadata")
+    rm -f -- "$metadata"
+    [[ $fields ]] || return 1
+    IFS=$'\t' read -r url digest <<< "$fields"
+    [[ $digest == sha256:* ]] || return 1
+    installer_download_verified "$url" "$digest" "$destination" "$name"
+}
+
+installer_tar_paths_safe() {
+    local archive=$1 entry normalized
+
+    tar tzf "$archive" > /dev/null 2>&1 || return 1
+    while IFS= read -r entry; do
+        normalized=${entry#./}
+        if [[ ! $normalized || $normalized == '.' ]]; then
+            continue
+        fi
+        if [[ $normalized == /* || $normalized == '..' || $normalized == ../* || $normalized == */../* ]]; then
+            return 1
+        fi
+    done < <(tar tzf "$archive")
+}
+
 download() {
-    local link="" name="" tmpfile="" is_ok=""
+    local name="" tmpfile="" is_ok="" expected=""
+    local repo="" tag="" asset=""
 
     case $1 in
+        jq)
+            name=jq
+            tmpfile=$tmpjq
+            is_ok=$is_jq_ok
+            case $is_arch in
+                amd64) expected=b1c22172dd303f3be49e935aa56aa48a8b7a46e0bc838b4997d3bb451495870f ;;
+                arm64) expected=8b85c817833814ddca00a144c33705546355afccf0cf39b188f3cdb48b852309 ;;
+            esac
+            if installer_download_verified "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-${is_arch}" "$expected" "$tmpfile" "$name"; then
+                chmod +x "$tmpfile"
+                if "$tmpfile" --version > /dev/null 2>&1; then
+                    mv -f -- "$tmpfile" "$is_ok"
+                fi
+            fi
+            return
+            ;;
         core)
-            [[ ! ${is_core_ver:-} ]] && is_core_ver=$(_wget -qO- "https://api.github.com/repos/${is_core_repo}/releases/latest?v=$RANDOM" | grep tag_name | grep -E -o 'v([0-9.]+)')
-            [[ $is_core_ver ]] && link="https://github.com/${is_core_repo}/releases/download/${is_core_ver}/${is_core}-${is_core_ver:1}-linux-${is_arch}.tar.gz"
             name=$is_core_name
             tmpfile=$tmpcore
             is_ok=$is_core_ok
+            repo=$is_core_repo
+            tag=${is_core_ver:-latest}
+            if [[ $tag == latest ]]; then
+                local core_metadata="$tmpdir/core-release.json"
+                if ! _wget -q -t 5 -T 30 "https://api.github.com/repos/${repo}/releases/latest" -O "$core_metadata"; then
+                    return
+                fi
+                is_core_ver=$("$json_tool" -r '.tag_name // empty' "$core_metadata")
+                rm -f -- "$core_metadata"
+                tag=$is_core_ver
+            fi
+            [[ $tag =~ ^v?[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || return
+            asset="${is_core}-${tag#v}-linux-${is_arch}.tar.gz"
             ;;
         sh)
-            # =======================================================================
-            # 适配新仓库 main 分支打包
-            # =======================================================================
-            link="https://github.com/${is_sh_repo}/archive/refs/heads/main.tar.gz"
             name="$is_core_name 脚本"
             tmpfile=$tmpsh
             is_ok=$is_sh_ok
-            ;;
-        jq)
-            link=https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$is_arch
-            name="jq"
-            tmpfile=$tmpjq
-            is_ok=$is_jq_ok
+            repo=$is_sh_repo
+            tag=latest
+            asset=code.tar.gz
             ;;
     esac
 
-    if [[ $link ]]; then
-        msg warn "下载 ${name} > ${link}"
-        if _wget -t 3 -q -c "$link" -O "$tmpfile"; then
-            mv -f -- "$tmpfile" "$is_ok"
-        fi
+    if [[ $repo && $tag && $asset ]] && installer_release_download "$repo" "$tag" "$asset" "$tmpfile" "$name"; then
+        mv -f -- "$tmpfile" "$is_ok"
     fi
 }
 
@@ -252,29 +344,17 @@ check_status() {
         msg err "安装依赖包失败"
         is_fail=1
     fi
-    if [[ $is_wget ]]; then
-        if [[ ! -f $is_core_ok ]]; then
-            msg err "下载 ${is_core_name} 失败"
-            is_fail=1
-        fi
-        if [[ ! -f $is_sh_ok ]]; then
-            msg err "下载脚本失败"
-            is_fail=1
-        fi
-        if [[ ! -f $is_jq_ok ]]; then
-            msg err "下载 jq 失败"
-            is_fail=1
-        fi
-    else
-        if [[ ! $is_fail ]]; then
-            is_wget=1
-            [[ ! ${is_core_file:-} ]] && download core &
-            [[ ! ${local_install:-} ]] && download sh &
-            [[ ${jq_not_found:-} ]] && download jq &
-            get_ip
-            wait
-            check_status
-        fi
+    if [[ ! -f $is_core_ok ]]; then
+        msg err "下载 ${is_core_name} 失败"
+        is_fail=1
+    fi
+    if [[ ! -f $is_sh_ok ]]; then
+        msg err "下载脚本失败"
+        is_fail=1
+    fi
+    if [[ ! -f $is_jq_ok ]]; then
+        msg err "下载 jq 失败"
+        is_fail=1
     fi
     [[ $is_fail ]] && exit_and_del_tmpdir
 }
@@ -294,6 +374,7 @@ pass_args() {
             -v | --core-version)
                 [[ $# -ge 2 && -n $2 ]] || err "$1 缺少版本号."
                 is_core_ver="v${2#v}"
+                [[ $is_core_ver =~ ^v[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || err "核心版本号包含不安全字符."
                 shift 2
                 ;;
             -h | --help) show_help ;;
@@ -343,27 +424,32 @@ main() {
         is_ntp_on=1
     fi
 
-    install_pkg "${is_pkg[@]}" &
+    install_pkg "${is_pkg[@]}"
+    if [[ ! -f $is_pkg_ok ]]; then
+        check_status
+    fi
+    command -v sha256sum > /dev/null 2>&1 || err "当前系统缺少 sha256sum，无法安全校验下载文件."
 
     if command -v jq > /dev/null 2>&1; then
+        json_tool=$(command -v jq)
         : > "$is_jq_ok"
     else
         jq_not_found=1
+        download jq
+        if [[ -f $is_jq_ok ]]; then
+            json_tool=$is_jq_ok
+        fi
     fi
 
-    [[ $is_wget ]] && {
-        [[ ! ${is_core_file:-} ]] && download core &
-        [[ ! ${local_install:-} ]] && download sh &
-        [[ ${jq_not_found:-} ]] && download jq &
-        get_ip
-    }
-
-    wait
+    [[ $json_tool ]] || err "jq 不可用，无法校验 GitHub Release 元数据."
+    [[ ! ${is_core_file:-} ]] && download core
+    [[ ! ${local_install:-} ]] && download sh
+    get_ip
     check_status
 
     if [[ ${is_core_file:-} ]]; then
         mkdir -p "$tmpdir/testzip"
-        if ! tar zxf "$is_core_ok" --strip-components 1 -C "$tmpdir/testzip" &> /dev/null || [[ ! -f $tmpdir/testzip/$is_core ]]; then
+        if ! installer_tar_paths_safe "$is_core_ok" || ! tar zxf "$is_core_ok" --strip-components 1 -C "$tmpdir/testzip" &> /dev/null || [[ ! -f $tmpdir/testzip/$is_core ]]; then
             msg err "${is_core_name} 文件无法通过测试."
             exit_and_del_tmpdir
         fi
@@ -391,6 +477,7 @@ EOF
     if [[ ${local_install:-} ]]; then
         cp -rf -- "$PWD"/* "$is_sh_dir"
     else
+        installer_tar_paths_safe "$is_sh_ok" || err "脚本发布包包含不安全路径."
         tar zxf "$is_sh_ok" --strip-components=1 -C "$is_sh_dir"
     fi
 
@@ -398,6 +485,7 @@ EOF
     if [[ ${is_core_file:-} ]]; then
         cp -rf -- "$tmpdir/testzip"/* "$is_core_dir/bin"
     else
+        installer_tar_paths_safe "$is_core_ok" || err "${is_core_name} 发布包包含不安全路径."
         tar zxf "$is_core_ok" --strip-components 1 -C "$is_core_dir/bin"
     fi
 
@@ -410,9 +498,10 @@ EOF
     if [[ ${jq_not_found:-} ]]; then
         mv -f -- "$is_jq_ok" /usr/bin/jq
         echo "file|/usr/bin/jq" >> "$is_sh_dir/.install_manifest"
+        chmod +x /usr/bin/jq
     fi
 
-    chmod +x "$is_core_bin" "$is_sh_bin" /usr/bin/jq "${is_sh_bin/$is_core/sb}"
+    chmod +x "$is_core_bin" "$is_sh_bin" "${is_sh_bin/$is_core/sb}"
 
     mkdir -p "$is_log_dir"
     msg ok "生成配置文件..."

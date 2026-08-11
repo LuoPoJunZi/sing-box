@@ -5,7 +5,7 @@
 
 load_lib() {
     local lib_name
-    for lib_name in manifest fs json systemd firewall net crypto tunnel; do
+    for lib_name in manifest fs json systemd firewall net crypto download tunnel; do
         . "$is_sh_dir/src/lib/${lib_name}.sh"
     done
 }

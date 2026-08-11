@@ -4,7 +4,7 @@
 # ==========================================
 
 author="LuoPoJunZi"
-is_sh_ver="v26.7.31"
+is_sh_ver="v26.8.11"
 is_sh_repo="LuoPoJunZi/sing-box-ev"
 
 # --- 1. 终端 UI 颜色定义 ---
@@ -114,7 +114,7 @@ load() {
     # shellcheck source=/dev/null
     . "$is_sh_dir/src/$1"
 }
-_wget() { wget --no-check-certificate "$@"; }
+_wget() { wget "$@"; }
 cmd=$(command -v apt-get || command -v yum || command -v zypper)
 
 case $(uname -m) in

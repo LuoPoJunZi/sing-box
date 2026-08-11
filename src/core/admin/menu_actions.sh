@@ -13,11 +13,12 @@ admin_menu_run_service_action() {
 }
 
 admin_menu_run_update_action() {
-    case $1 in
-        1) admin_menu_run update core ;;
-        2) admin_menu_run update sh ;;
-        3) admin_menu_run update caddy ;;
-    esac
+    local index=$1 target=""
+
+    if [[ $index =~ ^[0-9]+$ && $index -ge 1 && $index -le ${#admin_menu_update_targets[@]} ]]; then
+        target=${admin_menu_update_targets[$((index - 1))]}
+        admin_menu_run update "$target"
+    fi
 }
 
 admin_menu_ask_advanced_action() {
@@ -64,7 +65,15 @@ admin_menu_run_advanced_action() {
         7) admin_menu_run dns ;;
         8)
             is_tmp_list=("更新$is_core_name" "更新脚本")
-            if [[ $is_caddy ]]; then is_tmp_list+=("更新Caddy"); fi
+            admin_menu_update_targets=(core sh)
+            if [[ $is_caddy ]]; then
+                is_tmp_list+=("更新Caddy")
+                admin_menu_update_targets+=(caddy)
+            fi
+            if command -v cloudflared > /dev/null 2>&1; then
+                is_tmp_list+=("更新cloudflared")
+                admin_menu_update_targets+=(cloudflared)
+            fi
             ask list is_do_update "" "\n请选择手动更新:"
             admin_menu_run_update_action "$REPLY"
             ;;

@@ -51,3 +51,50 @@ dns_set_server() {
         is_dns_type=udp
     fi
 }
+
+dns_legacy_server_count() {
+    local config_file=${1:-$is_config_json}
+
+    [[ -f $config_file ]] || {
+        printf '0\n'
+        return
+    }
+    jq -r '[.dns.servers[]? | select(type == "object" and has("address"))] | length' "$config_file" 2> /dev/null || printf '0\n'
+}
+
+dns_config_uses_legacy_servers() {
+    local count
+
+    count=$(dns_legacy_server_count "${1:-$is_config_json}")
+    [[ $count =~ ^[0-9]+$ && $count -gt 0 ]]
+}
+
+dns_build_modern_config() {
+    local input_file=$1 output_file=$2
+
+    jq '
+        def modern_dns_server:
+            . as $old |
+            if (has("address") | not) then
+                .
+            elif ($old.address | type) != "string" or $old.address == "" then
+                error("unsupported legacy DNS address")
+            else
+                ($old | del(.address, .address_resolver)) as $base |
+                ($old.address_resolver // "") as $resolver |
+                if $old.address == "local" then
+                    $base + {type: "local"}
+                elif ($old.address | test("^[A-Za-z][A-Za-z0-9+.-]*://")) then
+                    ($old.address | capture("^(?<type>tcp|udp|tls|https|quic|h3)://(?<server>[^/]+)(?<path>/.*)?$")) as $parsed |
+                    $base + {type: $parsed.type, server: $parsed.server} +
+                    (if $resolver != "" then {domain_resolver: $resolver} else {} end) +
+                    (if (($parsed.path // "") != "" and ($parsed.type == "https" or $parsed.type == "h3")) then {path: $parsed.path} else {} end)
+                else
+                    $base + {type: "udp", server: $old.address} +
+                    (if $resolver != "" then {domain_resolver: $resolver} else {} end)
+                end
+            end;
+
+        .dns.servers |= map(modern_dns_server)
+    ' "$input_file" > "$output_file"
+}

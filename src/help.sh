@@ -39,7 +39,7 @@ show_help() {
                 "   import                                          导入 xray/v2ray 脚本配置\n"
                 "管理:"
                 "   un, uninstall                                   卸载"
-                "   u, update [core | sh | caddy] [ver]             更新"
+                "   u, update [core | sh | caddy | cloudflared] [ver] 更新并校验，失败自动回滚"
                 "   doctor, diag                                    系统诊断 (环境/颜色/依赖/服务/端口/配置/网络/客户端兼容)"
                 "   manifest [summary|list|raw]                     查看安装清单"
                 "   backup [list|create [reason]]                   配置快照管理"
