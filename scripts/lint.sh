@@ -30,6 +30,9 @@ bash scripts/test-dns-migration.sh
 echo "[lint] update transaction"
 bash scripts/test-update-transaction.sh
 
+echo "[lint] upstream compatibility"
+bash scripts/test-upstream-compat.sh
+
 echo "[lint] shfmt"
 shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts
 

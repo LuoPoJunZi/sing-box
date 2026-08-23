@@ -156,6 +156,9 @@ Expected:
 - The candidate core validates the current configuration before the running binary changes.
 - The service remains active after an update; a failed health check restores the previous binary and configuration.
 - Legacy `dns.servers[].address` entries are either reported by `doctor` or migrated only after candidate-core validation.
+- `doctor` reports the installed sing-box version and recommends `1.13.19` or later.
+- cloudflared `2026.8.0` and `2026.8.1` are reported as blocked versions; `sb update cloudflared 2026.8.1` must refuse the update before downloading or replacing files.
+- sing-box compatibility findings include concrete config filenames. Special legacy DNS servers, legacy DNS in node files, and conflicting 1.14 DNS rules must block a 1.14 core update instead of being rewritten silently.
 - Script updates preserve the install manifest, snapshots, and Reality domain-pool data.
 
 ## 9. Complete Uninstall Checks

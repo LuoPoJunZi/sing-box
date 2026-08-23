@@ -115,7 +115,10 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
 - Official components are downloaded from GitHub Releases and checked against each asset's SHA-256 digest. Missing or mismatched digests prevent replacement.
 - Core and Caddy candidates are validated against the current configuration before replacement, followed by a service health check and automatic rollback on failure.
 - Script updates preserve the install manifest, configuration snapshots, and Reality domain-pool data. cloudflared updates also check existing tunnel services.
-- `sb doctor` reports legacy `dns.servers[].address` entries. `sb update core` writes the modern format only after the candidate core validates the migrated configuration.
+- cloudflared `2026.8.0` and `2026.8.1` contain confirmed HTTP path-handling regressions. The updater refuses them, and `sb doctor` tells affected users to install `2026.8.2` or later.
+- `sb doctor` checks the recommended minimum stable sing-box version (`1.13.19`) and reports legacy DNS servers, FakeIP, DNS rules, cache fields, inline ACME, and other migration risks per file.
+- Plain `dns.servers[].address` entries in the main config can still be migrated transactionally. Special DNS servers, legacy DNS entries in node files, and conflicting 1.14 DNS rules block the update until they are handled manually.
+- Default updates continue to follow stable sing-box releases rather than 1.14 betas. Fields introduced as deprecated in 1.14 and planned for removal in 1.16 are reported early for gradual cleanup.
 
 ---
 

@@ -21,6 +21,36 @@ admin_update_replace_binary() {
     install -m 0755 "$candidate" "${target}.new" && mv -f -- "${target}.new" "$target"
 }
 
+admin_update_core_preflight() {
+    local target_version=$1 config_file
+    local manual_files=()
+
+    version_is_at_least "$target_version" 1.14.0 || return 0
+    if ! command -v jq > /dev/null 2>&1; then
+        msg "缺少 jq，无法执行 sing-box 1.14 配置兼容预检."
+        return 1
+    fi
+    mapfile -t manual_files < <(compat_sing_box_114_manual_files "$is_config_json" "$is_conf_dir")
+    [[ ${#manual_files[@]} -eq 0 ]] && return 0
+
+    msg "检测到 sing-box 1.14 无法安全自动迁移的配置:"
+    for config_file in "${manual_files[@]}"; do
+        msg "  - $config_file"
+    done
+    msg "请先执行 sb doctor，并按提示手动迁移后再更新核心."
+    return 1
+}
+
+admin_update_cloudflared_version_allowed() {
+    local version=$1
+
+    if cloudflared_version_is_blocked "$version"; then
+        msg "cloudflared $version 存在官方确认的 HTTP 路径处理问题，已拒绝安装."
+        msg "请使用 cloudflared 2026.8.2 或更高版本."
+        return 1
+    fi
+}
+
 admin_update_core() {
     local candidate="$download_stage_root/$is_core"
     local candidate_config=$is_config_json old_binary="$download_stage_dir/core.old"
@@ -177,11 +207,24 @@ admin_update_script() {
 
 admin_update_cloudflared() {
     local candidate="$download_stage_root/cloudflared" target=/usr/local/bin/cloudflared
-    local old_binary="$download_stage_dir/cloudflared.old" service_name rollback_service
+    local old_binary="$download_stage_dir/cloudflared.old" service_name rollback_service candidate_version
     local services=()
 
     if ! "$candidate" --version > /dev/null 2>&1; then
         admin_update_abort "cloudflared 候选文件无法运行."
+        return 1
+    fi
+    candidate_version=$("$candidate" --version 2> /dev/null | awk 'NR == 1 {print $3}')
+    if [[ -z $candidate_version ]]; then
+        admin_update_abort "无法识别 cloudflared 候选版本."
+        return 1
+    fi
+    if ! admin_update_cloudflared_version_allowed "$candidate_version"; then
+        admin_update_abort "cloudflared 候选版本已被安全规则阻止."
+        return 1
+    fi
+    if [[ $(version_normalize "$candidate_version") != "$(version_normalize "$is_new_ver")" ]]; then
+        admin_update_abort "cloudflared 候选版本与目标版本不一致."
         return 1
     fi
     cp -p -- "$target" "$old_binary" || {
@@ -260,6 +303,15 @@ admin_update() {
         msg "\n发现 $is_show_name 新版本: $(_green $latest_ver)\n"
         is_new_ver=$latest_ver
     fi
+
+    case $is_update_name in
+        core)
+            admin_update_core_preflight "$is_new_ver" || err "sing-box 核心更新预检未通过."
+            ;;
+        cloudflared)
+            admin_update_cloudflared_version_allowed "$is_new_ver" || err "cloudflared 更新预检未通过."
+            ;;
+    esac
 
     download_stage_component "$is_update_name" "$is_new_ver"
     case $is_update_name in

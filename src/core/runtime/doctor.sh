@@ -136,6 +136,106 @@ runtime_doctor_manifest() {
     fi
 }
 
+runtime_doctor_sing_box_version() {
+    local minimum
+
+    minimum=$(sing_box_recommended_min_version)
+    if [[ -z ${is_core_ver:-} ]]; then
+        runtime_doctor_warn "sing-box 版本: 无法识别，建议检查核心文件"
+        return 1
+    fi
+    if version_is_less_than "$is_core_ver" "$minimum"; then
+        runtime_doctor_warn "sing-box 版本: $is_core_ver，建议升级到 $minimum 或更高稳定版"
+        runtime_doctor_info "1.13.19 包含读取不可信二进制数据时的内存分配修复."
+        return 1
+    fi
+    runtime_doctor_ok "sing-box 版本: $is_core_ver，已达到建议最低版本 $minimum"
+}
+
+runtime_doctor_cloudflared_version() {
+    local version
+
+    command -v cloudflared > /dev/null 2>&1 || return 0
+    version=$(cloudflared --version 2> /dev/null | awk 'NR == 1 {print $3}')
+    if [[ -z $version ]]; then
+        runtime_doctor_warn "cloudflared 版本: 无法识别"
+        return 1
+    fi
+    if cloudflared_version_is_blocked "$version"; then
+        runtime_doctor_warn "cloudflared 版本: $version 已被官方标记为不可使用"
+        runtime_doctor_info "请执行 sb update cloudflared，升级到 2026.8.2 或更高版本."
+        return 1
+    fi
+    runtime_doctor_ok "cloudflared 版本: $version"
+}
+
+runtime_doctor_compat_issue_label() {
+    case $1 in
+        legacy_dns_server) printf '%s\n' "旧 DNS server" ;;
+        legacy_dns_special_server) printf '%s\n' "特殊旧 DNS server" ;;
+        legacy_dns_server_options) printf '%s\n' "旧 DNS server 策略字段" ;;
+        legacy_dns_fakeip) printf '%s\n' "旧 FakeIP" ;;
+        legacy_dns_outbound_rule) printf '%s\n' "旧 DNS outbound 规则" ;;
+        dns_independent_cache) printf '%s\n' "independent_cache" ;;
+        cache_store_rdrc) printf '%s\n' "store_rdrc" ;;
+        dns_legacy_address_filter) printf '%s\n' "旧 DNS 地址过滤" ;;
+        dns_legacy_strategy) printf '%s\n' "旧 DNS strategy" ;;
+        dns_rule_set_accept_empty) printf '%s\n' "rule_set_ip_cidr_accept_empty" ;;
+        inline_acme) printf '%s\n' "内联 TLS ACME" ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+runtime_doctor_sing_box_config_compat() {
+    local config_file config_name issue_key issue_count label detail=""
+    local issue_total=0 issue_config_count=0
+    local config_files=() node_configs=() issue_items=() manual_files=()
+
+    command -v jq > /dev/null 2>&1 || return 0
+    [[ -f $is_config_json ]] && config_files+=("$is_config_json")
+    if [[ -d $is_conf_dir ]]; then
+        mapfile -t node_configs < <(find "$is_conf_dir" -maxdepth 1 -type f -name '*.json' 2> /dev/null | sort)
+        config_files+=("${node_configs[@]}")
+    fi
+
+    for config_file in "${config_files[@]}"; do
+        jq -e empty "$config_file" > /dev/null 2>&1 || continue
+        detail=""
+        while IFS=$'\t' read -r issue_key issue_count; do
+            [[ $issue_key && $issue_count =~ ^[0-9]+$ ]] || continue
+            label=$(runtime_doctor_compat_issue_label "$issue_key")
+            detail="${detail:+$detail, }$label=$issue_count"
+            ((issue_total += issue_count))
+        done < <(compat_sing_box_issue_report "$config_file")
+        if [[ $detail ]]; then
+            config_name=$(basename "$config_file")
+            issue_items+=("$config_name: $detail")
+            ((issue_config_count++))
+        fi
+    done
+
+    if [[ $issue_total -eq 0 ]]; then
+        runtime_doctor_ok "sing-box 配置兼容: 未发现已知旧格式或弃用字段"
+        return 0
+    fi
+
+    runtime_doctor_warn "sing-box 配置兼容: $issue_config_count 个文件包含 $issue_total 项待迁移配置"
+    for detail in "${issue_items[@]}"; do
+        msg "  - $detail"
+    done
+    mapfile -t manual_files < <(compat_sing_box_114_manual_files "$is_config_json" "$is_conf_dir")
+    if [[ ${#manual_files[@]} -gt 0 ]]; then
+        runtime_doctor_info "以下配置在升级 sing-box 1.14 前需要手动迁移:"
+        for config_file in "${manual_files[@]}"; do
+            msg "  - $config_file"
+        done
+    else
+        runtime_doctor_info "普通旧 DNS address 可由 sb update core 在候选核心校验通过后自动迁移."
+    fi
+    runtime_doctor_info "其余弃用字段建议按提示逐步清理，为 sing-box 1.16 做准备."
+    return 1
+}
+
 runtime_doctor_join_limited() {
     local limit=$1 count=0 shown=0 item="" output=""
     shift
@@ -422,8 +522,9 @@ runtime_doctor() {
     local host_ip="" host_ip6="" dns_test=""
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
-    local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0 warn_legacy_dns=0
-    local jq_version="" legacy_dns_count=0
+    local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
+    local warn_core_version=0 warn_cloudflared_version=0 warn_sing_box_compat=0
+    local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
 
@@ -459,6 +560,9 @@ runtime_doctor() {
     msg "------------- 文件与配置 -------------"
     if [[ -x $is_core_bin ]]; then
         runtime_doctor_ok "核心二进制: $is_core_bin"
+        if ! runtime_doctor_sing_box_version; then
+            warn_core_version=1
+        fi
     else
         runtime_doctor_fail "核心二进制不存在: $is_core_bin"
         fail_core_bin=1
@@ -466,15 +570,6 @@ runtime_doctor() {
 
     if [[ -f $is_config_json ]]; then
         runtime_doctor_ok "主配置存在: $is_config_json"
-        if command -v jq > /dev/null 2>&1; then
-            legacy_dns_count=$(dns_legacy_server_count "$is_config_json")
-            if [[ $legacy_dns_count -gt 0 ]]; then
-                runtime_doctor_warn "DNS 配置仍使用旧版 address 字段 ($legacy_dns_count 项)，升级 sing-box 1.14 前需要迁移"
-                warn_legacy_dns=1
-            else
-                runtime_doctor_ok "DNS 配置格式: 未发现已废弃的 address 字段"
-            fi
-        fi
     else
         runtime_doctor_fail "主配置缺失: $is_config_json"
         fail_config=1
@@ -488,6 +583,10 @@ runtime_doctor() {
         fail_conf_dir=1
     fi
 
+    if ! runtime_doctor_sing_box_config_compat; then
+        warn_sing_box_compat=1
+    fi
+
     runtime_doctor_manifest
     runtime_doctor_disk "$is_core_dir" "/etc/sing-box"
     runtime_doctor_disk "$is_log_dir" "/var/log/sing-box"
@@ -499,6 +598,9 @@ runtime_doctor() {
     runtime_doctor_reality
 
     msg "------------- 服务与端口 -------------"
+    if ! runtime_doctor_cloudflared_version; then
+        warn_cloudflared_version=1
+    fi
     if [[ $fail_systemd -eq 0 ]]; then
         if systemctl list-unit-files "$is_core.service" 2> /dev/null | grep -q "^$is_core.service"; then
             runtime_doctor_ok "服务单元存在: $is_core.service"
@@ -614,8 +716,14 @@ runtime_doctor() {
         if [[ $warn_jq_version -eq 1 ]]; then
             msg "10) jq 版本偏旧：请通过系统包管理器升级，或重新安装脚本以获取已校验的 jq 1.8.2"
         fi
-        if [[ $warn_legacy_dns -eq 1 ]]; then
-            msg "11) 旧版 DNS 配置：可先执行 sb dns 重新选择 DNS；sb update core 也会在候选核心校验通过后自动迁移"
+        if [[ $warn_core_version -eq 1 ]]; then
+            msg "11) sing-box 版本偏旧：执行 sb update core 升级到最新稳定版"
+        fi
+        if [[ $warn_sing_box_compat -eq 1 ]]; then
+            msg "12) 配置兼容：先执行 sb backup create pre-migrate，再按上方文件清单迁移；普通旧 DNS address 可由核心更新安全转换"
+        fi
+        if [[ $warn_cloudflared_version -eq 1 ]]; then
+            msg "13) cloudflared 版本异常：执行 sb update cloudflared，禁止继续使用 2026.8.0/2026.8.1"
         fi
         msg "----------------------------------------"
     fi

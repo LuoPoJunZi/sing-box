@@ -55,6 +55,9 @@ jobs:
       - name: Test update transaction
         run: bash scripts/test-update-transaction.sh
 
+      - name: Test upstream compatibility
+        run: bash scripts/test-upstream-compat.sh
+
   shfmt:
     name: shfmt
     runs-on: ubuntu-latest

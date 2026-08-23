@@ -114,7 +114,10 @@ sb status   # 查看运行状态
 - 官方组件从 GitHub Release 下载，并校验 Release 资源的 SHA-256；校验值缺失或不匹配时不会替换本机文件。
 - 核心和 Caddy 更新会先校验候选文件及现有配置，替换后检查服务状态，异常时自动恢复旧版本。
 - 脚本更新会保留安装清单、配置快照和 Reality 域名池数据；cloudflared 更新后会检查已有隧道服务。
-- 如果主配置仍使用旧版 `dns.servers[].address`，`sb doctor` 会提示；`sb update core` 只会在候选核心验证迁移结果后写入新格式。
+- cloudflared `2026.8.0` 和 `2026.8.1` 存在官方确认的 HTTP 路径处理问题，更新器会拒绝安装；`sb doctor` 也会提醒已安装用户升级到 `2026.8.2` 或更高版本。
+- `sb doctor` 会检查 sing-box 是否达到建议最低稳定版 `1.13.19`，并按文件列出旧 DNS server、FakeIP、DNS 规则、缓存字段和内联 ACME 等兼容风险。
+- 普通主配置 `dns.servers[].address` 可由 `sb update core` 安全迁移；特殊 DNS server、节点目录中的旧 DNS 格式或 1.14 冲突规则会在更新前被阻止并要求手动处理。
+- 默认更新继续跟随 sing-box 正式稳定版，不自动安装 1.14 beta；1.14 新增但计划在 1.16 移除的弃用字段会提前提示，方便逐步清理。
 
 ---
 
