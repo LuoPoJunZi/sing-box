@@ -1,8 +1,8 @@
-﻿# Sing-box-EV
+﻿# sing-box
 
 中文文档 | [English](./README.en.md)
 
-Sing-box-EV 是一个面向 Linux 服务器的 `sing-box` 管理脚本项目。它提供：
+本仓库提供一个面向 Linux 服务器的 `sing-box` 管理脚本。它支持：
 
 - 一键安装与更新
 - TUI 菜单操作
@@ -52,13 +52,13 @@ Sing-box-EV 是一个面向 Linux 服务器的 `sing-box` 管理脚本项目。�
 ## 3. 快速安装（用户）
 
 ```bash
-bash <(curl -s -L https://raw.githubusercontent.com/LuoPoJunZi/sing-box-ev/main/install.sh)
+bash <(curl -s -L https://raw.githubusercontent.com/LuoPoJunZi/sing-box/main/install.sh)
 ```
 
 备用：
 
 ```bash
-bash <(curl -s -L https://github.com/LuoPoJunZi/sing-box-ev/raw/main/install.sh)
+bash <(curl -s -L https://github.com/LuoPoJunZi/sing-box/raw/main/install.sh)
 ```
 
 安装后常用命令：
@@ -254,8 +254,8 @@ sb status   # 查看运行状态
 ### 7.1 第一次克隆后做什么
 
 ```bash
-git clone https://github.com/LuoPoJunZi/sing-box-ev.git
-cd sing-box-ev
+git clone https://github.com/LuoPoJunZi/sing-box.git
+cd sing-box
 ```
 
 阅读顺序建议：

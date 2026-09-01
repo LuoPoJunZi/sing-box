@@ -5,7 +5,7 @@ admin_is_main_menu() {
     while :; do
         clear
         ui_hr
-        ui_title "     Sing-box-EV 管理面板 $is_sh_ver  |  快捷启动: sb"
+        ui_title "     sing-box 管理面板 $is_sh_ver  |  快捷启动: sb"
         ui_hr
 
         local caddy_show=""

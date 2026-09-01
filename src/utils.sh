@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================
-# Sing-box-EV Utility Toolbox
+# sing-box Management Script Utility Toolbox
 # ==========================================
 
 load_lib() {

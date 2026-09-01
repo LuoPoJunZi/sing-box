@@ -5,7 +5,7 @@ query_show_all_nodes() {
     is_show_all=1
     clear
     ui_hr
-    ui_title "              Sing-box-EV 节点配置总览"
+    ui_title "              sing-box 节点配置总览"
     ui_hr
     echo
 

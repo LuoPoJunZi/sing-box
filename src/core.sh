@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================
-# Sing-box-EV Core Business Logic
+# sing-box Management Script Core Business Logic
 # ==========================================
 
 . "$is_sh_dir/src/core/env/defaults.sh"

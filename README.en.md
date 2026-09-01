@@ -1,9 +1,9 @@
-﻿# Sing-box-EV
+﻿# sing-box
 
 [中文文档](./README.md) | English
 
-Sing-box-EV is a Linux server management script project for `sing-box`.
-It provides:
+This repository provides a Linux server management script for `sing-box`.
+It supports:
 
 - One-click install and update
 - TUI menu + CLI shortcuts
@@ -53,13 +53,13 @@ This README is written for two audiences:
 ## 3. Quick Install (User)
 
 ```bash
-bash <(curl -s -L https://raw.githubusercontent.com/LuoPoJunZi/sing-box-ev/main/install.sh)
+bash <(curl -s -L https://raw.githubusercontent.com/LuoPoJunZi/sing-box/main/install.sh)
 ```
 
 Fallback:
 
 ```bash
-bash <(curl -s -L https://github.com/LuoPoJunZi/sing-box-ev/raw/main/install.sh)
+bash <(curl -s -L https://github.com/LuoPoJunZi/sing-box/raw/main/install.sh)
 ```
 
 Common startup commands:

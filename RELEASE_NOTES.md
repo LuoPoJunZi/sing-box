@@ -1,5 +1,12 @@
 # Release Notes
 
+## v26.9.1
+
+### 主要变化
+
+- 项目仓库由 `LuoPoJunZi/sing-box-ev` 更名为更简洁的 `LuoPoJunZi/sing-box`，安装、更新和问题反馈地址已同步切换。
+- README、中英文文档、终端菜单和节点总览统一使用 `sing-box` 名称，命令入口 `sb` 与已有配置保持不变。
+
 ## v26.8.23
 
 ### 主要变化

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Sing-box-EV.
+Thanks for helping improve this sing-box management script.
 
 ## Development Principles
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 author="LuoPoJunZi"
-# github=https://github.com/LuoPoJunZi/sing-box-ev
+# github=https://github.com/LuoPoJunZi/sing-box
 
 # bash fonts colors
 ui_color_enabled=1
@@ -107,7 +107,7 @@ is_sh_dir="$is_core_dir/sh"
 # ==================================================================
 # 适配新仓库地址
 # ==================================================================
-is_sh_repo="LuoPoJunZi/sing-box-ev"
+is_sh_repo="LuoPoJunZi/sing-box"
 
 is_pkg=(wget tar curl)
 # Used by functions loaded dynamically near the end of the installer.

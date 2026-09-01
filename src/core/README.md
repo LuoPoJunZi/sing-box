@@ -1,6 +1,6 @@
 # Core Modules
 
-This folder contains the refactored core modules for the Sing-box-EV script.
+This folder contains the refactored core modules for the sing-box management script.
 
 ## Module Map
 

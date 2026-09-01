@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================
-# Sing-box-EV CLI Entrypoint
+# sing-box Management Script CLI Entrypoint
 # ==========================================
 
 # 1. 加载全局环境与核心函数

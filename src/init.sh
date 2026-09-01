@@ -1,11 +1,11 @@
 #!/bin/bash
 # ==========================================
-# Sing-box-EV Environment Initialization
+# sing-box Management Script Environment Initialization
 # ==========================================
 
 author="LuoPoJunZi"
-is_sh_ver="v26.8.23"
-is_sh_repo="LuoPoJunZi/sing-box-ev"
+is_sh_ver="v26.9.1"
+is_sh_repo="LuoPoJunZi/sing-box"
 
 # --- 1. 终端 UI 颜色定义 ---
 ui_color_enabled=1
