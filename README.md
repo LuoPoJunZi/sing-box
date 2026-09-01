@@ -1,19 +1,20 @@
-﻿# sing-box
+﻿<div align="center">
+  <h1>sing-box</h1>
+  <p>面向 Linux 服务器的一键安装与节点管理脚本</p>
+  <p><strong>安装即用 · 菜单清晰 · 更新可靠 · 回滚安全</strong></p>
 
-中文文档 | [English](./README.en.md)
+  <p>
+    <a href="https://www.gnu.org/software/bash/"><img alt="Language: Bash" src="https://img.shields.io/badge/Language-Bash-4EAA25?style=flat-square&amp;logo=gnubash&amp;logoColor=white"></a>
+    <img alt="Platform: Linux" src="https://img.shields.io/badge/Platform-Linux-FCC624?style=flat-square&amp;logo=linux&amp;logoColor=black">
+    <a href="https://github.com/LuoPoJunZi/sing-box/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/LuoPoJunZi/sing-box?style=flat-square&amp;label=Version&amp;color=0A7FBC"></a>
+    <a href="./LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/github/license/LuoPoJunZi/sing-box?style=flat-square&amp;label=License&amp;color=007EC6"></a>
+  </p>
 
-本仓库提供一个面向 Linux 服务器的 `sing-box` 管理脚本。它支持：
-
-- 一键安装与更新
-- TUI 菜单操作
-- CLI 快捷命令
-- 多协议节点管理（含 Reality / AnyTLS / CFtunnel）
-- 基础自动运维（服务管理、日志清理、定时任务）
-
-这份 README 的目标是让两类人都能快速上手：
-
-- 使用者：快速安装和管理节点
-- 开发者：即使第一次接触这个项目，也能在 30 分钟内开始改代码
+  <p>
+    <a href="./README.md"><img alt="简体中文" src="https://img.shields.io/badge/-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-244B5A?style=for-the-badge"></a>
+    <a href="./README.en.md"><img alt="English" src="https://img.shields.io/badge/-ENGLISH-244B5A?style=for-the-badge"></a>
+  </p>
+</div>
 
 ---
 

@@ -1,20 +1,20 @@
-﻿# sing-box
+﻿<div align="center">
+  <h1>sing-box</h1>
+  <p>One-command installation and node management for Linux servers</p>
+  <p><strong>Easy setup · Clear menus · Reliable updates · Safe rollback</strong></p>
 
-[中文文档](./README.md) | English
+  <p>
+    <a href="https://www.gnu.org/software/bash/"><img alt="Language: Bash" src="https://img.shields.io/badge/Language-Bash-4EAA25?style=flat-square&amp;logo=gnubash&amp;logoColor=white"></a>
+    <img alt="Platform: Linux" src="https://img.shields.io/badge/Platform-Linux-FCC624?style=flat-square&amp;logo=linux&amp;logoColor=black">
+    <a href="https://github.com/LuoPoJunZi/sing-box/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/LuoPoJunZi/sing-box?style=flat-square&amp;label=Version&amp;color=0A7FBC"></a>
+    <a href="./LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/github/license/LuoPoJunZi/sing-box?style=flat-square&amp;label=License&amp;color=007EC6"></a>
+  </p>
 
-This repository provides a Linux server management script for `sing-box`.
-It supports:
-
-- One-click install and update
-- TUI menu + CLI shortcuts
-- Multi-protocol node management (including Reality / AnyTLS / CFtunnel)
-- Subscription export tools
-- Basic ops automation (service control, log cleanup, cron tasks)
-
-This README is written for two audiences:
-
-- Users: install and manage nodes quickly
-- Developers: start contributing even on first contact with this codebase
+  <p>
+    <a href="./README.md"><img alt="简体中文" src="https://img.shields.io/badge/-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-244B5A?style=for-the-badge"></a>
+    <a href="./README.en.md"><img alt="English" src="https://img.shields.io/badge/-ENGLISH-244B5A?style=for-the-badge"></a>
+  </p>
+</div>
 
 ---
 
