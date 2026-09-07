@@ -105,20 +105,22 @@ sb status
 - Trojan and VMess-QUIC use only `pcs` for certificate pinning and no longer export `insecure/allowInsecure`.
 - Hysteria2 follows its official `insecure=1 + pinSHA256` format. The common TUIC link uses `insecure=1 + pcs`; neither is allowed without a certificate pin.
 - v2rayN currently does not map URI `pcs` to the sing-box public-key pin, so `sb info <config>` continues to print a secure `certificate_public_key_sha256` client snippet.
+- Clients should use at least v2rayN `7.24.9` and Xray-core `26.7.11`. The former fixes a man-in-the-middle risk in the legacy built-in downloader, while the latter fixes a certificate-pinning issue.
+- As of 2026-09-07, v2rayN `7.25.0` includes sing-box 1.14 configuration support but remains a pre-release. Stable-channel users can keep using the Xray core or wait for a stable v2rayN release.
 - If the certificate fingerprint cannot be calculated, the script refuses to generate that node's URL, QR code, or subscription entry instead of falling back to unverified TLS.
 - Previously imported client profiles are not updated automatically. Run `sb url <config>` again or regenerate the subscription and re-import it after upgrading the script.
 
-The compatibility implementation follows the [v2rayN allowInsecure migration note](https://github.com/2dust/v2rayN/discussions/9460), [v2rayN 7.24.6](https://github.com/2dust/v2rayN/releases/tag/7.24.6), [Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
+The compatibility implementation follows the [v2rayN allowInsecure migration note](https://github.com/2dust/v2rayN/discussions/9460), [v2rayN 7.24.9](https://github.com/2dust/v2rayN/releases/tag/7.24.9), [v2rayN 7.25.0](https://github.com/2dust/v2rayN/releases/tag/7.25.0), [Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28), the [Xray certificate-pinning advisory](https://github.com/XTLS/Xray-core/security/advisories/GHSA-5wf9-h793-w73c), the [Xray share-link proposal](https://github.com/XTLS/Xray-core/discussions/716), the [Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/), and [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/).
 
-### 4.2 Secure Updates and sing-box 1.14 Readiness
+### 4.2 Secure Updates and sing-box 1.14 Stable Compatibility
 
 - Official components are downloaded from GitHub Releases and checked against each asset's SHA-256 digest. Missing or mismatched digests prevent replacement.
 - Core and Caddy candidates are validated against the current configuration before replacement, followed by a service health check and automatic rollback on failure.
 - Script updates preserve the install manifest, configuration snapshots, and Reality domain-pool data. cloudflared updates also check existing tunnel services.
-- cloudflared `2026.8.0` and `2026.8.1` contain confirmed HTTP path-handling regressions. The updater refuses them, and `sb doctor` tells affected users to install `2026.8.2` or later.
-- `sb doctor` checks the recommended minimum stable sing-box version (`1.13.19`) and reports legacy DNS servers, FakeIP, DNS rules, cache fields, inline ACME, and other migration risks per file.
+- cloudflared `2026.8.0` and `2026.8.1` contain confirmed HTTP path-handling regressions, so the updater refuses them. The safe floor is `2026.8.2`; as of 2026-09-07, the latest reviewed stable release is `2026.8.3`.
+- `sb doctor` distinguishes the minimum compatible sing-box version (`1.13.19`) from the recommended stable version (`1.14.0`) and reports legacy DNS servers, FakeIP, DNS rules, cache fields, inline ACME, and other migration risks per file.
 - Plain `dns.servers[].address` entries in the main config can still be migrated transactionally. Special DNS servers, legacy DNS entries in node files, and conflicting 1.14 DNS rules block the update until they are handled manually.
-- Default updates continue to follow stable sing-box releases rather than 1.14 betas. Fields introduced as deprecated in 1.14 and planned for removal in 1.16 are reported early for gradual cleanup.
+- sing-box `1.14.0` is now a stable release. Default updates install it only after compatibility preflight passes and do not follow `1.15` alpha releases. Deprecated fields scheduled for removal in 1.16 continue to be reported early.
 
 ---
 
@@ -138,6 +140,7 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
 │  ├─ check-release.sh                # validates version and release notes
 │  ├─ lint.sh                         # local lint wrapper
 │  ├─ regression-cli.sh               # repeatable CLI regression checks
+│  ├─ test-sing-box-release.sh         # validates representative configs with the recommended stable core
 │  ├─ smoke.sh                        # basic smoke checks
 │  └─ smoke-reality.sh                # Reality-focused smoke checks
 ├─ .github
@@ -275,13 +278,14 @@ Example: changing Reality add behavior
 ```bash
 bash scripts/lint.sh
 bash scripts/check-release.sh
+bash scripts/test-sing-box-release.sh
 bash scripts/smoke.sh
 bash scripts/regression-cli.sh
 # Optional on test host:
 bash scripts/smoke-reality.sh
 ```
 
-`smoke-reality.sh` creates and removes Reality test nodes; run it on test environments only.
+`test-sing-box-release.sh` downloads and verifies the currently recommended stable core, then checks DNS migration output and representative node configurations; it requires GitHub Release access. `smoke-reality.sh` creates and removes Reality test nodes; run it on test environments only.
 Full VPS regression steps are documented in [docs/VPS_REGRESSION.md](./docs/VPS_REGRESSION.md).
 
 For read-only CLI checks:
@@ -325,7 +329,7 @@ If you extend selection strategy, prioritize adding it under `src/core/domain/` 
 ### 9.1 CI
 
 - Workflow: `.github/workflows/lint.yml`
-- Checks: `shellcheck` + `shfmt` + structure checks
+- Checks: `shellcheck` + `shfmt` + structure/share-link/release checks + real configuration validation with the recommended sing-box core
 
 ### 9.2 Release
 

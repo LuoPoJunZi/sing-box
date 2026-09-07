@@ -25,8 +25,23 @@ version_is_at_least() {
     ! version_is_less_than "$current" "$minimum"
 }
 
-sing_box_recommended_min_version() {
+sing_box_minimum_supported_version() {
     printf '%s\n' '1.13.19'
+}
+
+sing_box_recommended_stable_version() {
+    printf '%s\n' '1.14.0'
+}
+
+sing_box_recommended_min_version() {
+    sing_box_minimum_supported_version
+}
+
+version_is_prerelease() {
+    local version
+
+    version=$(version_normalize "$1")
+    [[ $version == *-* ]]
 }
 
 cloudflared_version_is_blocked() {

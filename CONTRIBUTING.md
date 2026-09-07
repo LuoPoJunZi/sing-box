@@ -49,8 +49,15 @@ CI now runs:
 - `scripts/test-install-cli.sh`
 - `scripts/test-dispatch.sh`
 - `scripts/test-runtime-safety.sh`
+- `scripts/test-download-security.sh`
+- `scripts/test-dns-migration.sh`
+- `scripts/test-update-transaction.sh`
+- `scripts/test-upstream-compat.sh`
+- `scripts/test-sing-box-release.sh` (downloads the verified sing-box 1.14.0 release and validates representative configurations)
 - `shfmt -d -i 4 -ci -sr`
 - `scripts/check-structure.sh`
+- `scripts/check-share-links.sh`
+- `scripts/test-share-output.sh`
 - `scripts/check-release.sh`
 
 Please run equivalent checks locally before opening a PR.

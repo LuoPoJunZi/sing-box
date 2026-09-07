@@ -74,6 +74,21 @@ jobs:
         run: |
           shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts
 
+  sing-box-compat:
+    name: recommended sing-box config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install compatibility test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Validate project configurations with the recommended sing-box release
+        run: bash scripts/test-sing-box-release.sh
+
   structure:
     name: structure
     runs-on: ubuntu-latest

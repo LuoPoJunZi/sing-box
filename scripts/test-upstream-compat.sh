@@ -17,12 +17,20 @@ msg() { :; }
 . src/lib/version.sh
 . src/core/utils/compat.sh
 . src/core/admin/update.sh
+. src/core/runtime/doctor.sh
 
+[[ $(sing_box_minimum_supported_version) == 1.13.19 ]] || fail "minimum supported sing-box version changed unexpectedly"
+[[ $(sing_box_recommended_stable_version) == 1.14.0 ]] || fail "recommended stable sing-box version is not 1.14.0"
+[[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
 version_is_less_than 1.13.18 1.13.19 || fail "older sing-box version was not detected"
 if version_is_less_than 1.13.19 1.13.19; then
     fail "equal sing-box version was treated as older"
 fi
 version_is_at_least v1.14.0-beta.17 1.14.0 || fail "sing-box 1.14 prerelease did not trigger preflight"
+version_is_prerelease v1.15.0-alpha.1 || fail "sing-box prerelease was not detected"
+if version_is_prerelease v1.14.0; then
+    fail "stable sing-box version was treated as a prerelease"
+fi
 cloudflared_version_is_blocked 2026.8.0 || fail "cloudflared 2026.8.0 was not blocked"
 cloudflared_version_is_blocked v2026.8.1 || fail "cloudflared 2026.8.1 was not blocked"
 if cloudflared_version_is_blocked 2026.8.2; then
@@ -86,5 +94,35 @@ admin_update_core_preflight v1.13.19 || fail "1.13 update was incorrectly blocke
 if admin_update_core_preflight v1.14.0; then
     fail "1.14 update preflight allowed manual-migration configs"
 fi
+
+doctor_output=""
+runtime_doctor_ok() { doctor_output+="OK:$*"$'\n'; }
+runtime_doctor_warn() { doctor_output+="WARN:$*"$'\n'; }
+runtime_doctor_info() { doctor_output+="INFO:$*"$'\n'; }
+
+is_core_ver=1.13.18
+if runtime_doctor_sing_box_version; then
+    fail "unsupported sing-box version passed doctor"
+fi
+grep -q '建议升级到 1.13.19' <<< "$doctor_output" || fail "doctor did not report the minimum supported version"
+
+doctor_output=""
+is_core_ver=1.13.19
+if runtime_doctor_sing_box_version; then
+    fail "minimum supported sing-box version was treated as recommended"
+fi
+grep -q '推荐稳定版 1.14.0' <<< "$doctor_output" || fail "doctor did not recommend sing-box 1.14.0"
+
+doctor_output=""
+is_core_ver=1.14.0
+runtime_doctor_sing_box_version || fail "recommended sing-box stable version failed doctor"
+grep -q '推荐稳定版基线 1.14.0' <<< "$doctor_output" || fail "doctor did not accept sing-box 1.14.0"
+
+doctor_output=""
+is_core_ver=1.15.0-alpha.1
+if runtime_doctor_sing_box_version; then
+    fail "sing-box prerelease passed the stable-version doctor check"
+fi
+grep -q '预发布版' <<< "$doctor_output" || fail "doctor did not warn about a sing-box prerelease"
 
 echo "[upstream-compat] ok"

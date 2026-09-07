@@ -137,9 +137,10 @@ runtime_doctor_manifest() {
 }
 
 runtime_doctor_sing_box_version() {
-    local minimum
+    local minimum recommended
 
-    minimum=$(sing_box_recommended_min_version)
+    minimum=$(sing_box_minimum_supported_version)
+    recommended=$(sing_box_recommended_stable_version)
     if [[ -z ${is_core_ver:-} ]]; then
         runtime_doctor_warn "sing-box 版本: 无法识别，建议检查核心文件"
         return 1
@@ -149,7 +150,17 @@ runtime_doctor_sing_box_version() {
         runtime_doctor_info "1.13.19 包含读取不可信二进制数据时的内存分配修复."
         return 1
     fi
-    runtime_doctor_ok "sing-box 版本: $is_core_ver，已达到建议最低版本 $minimum"
+    if version_is_prerelease "$is_core_ver"; then
+        runtime_doctor_warn "sing-box 版本: $is_core_ver 是预发布版，推荐稳定版为 $recommended"
+        runtime_doctor_info "默认更新只跟随正式 Release；如无测试需求，建议切回稳定版."
+        return 1
+    fi
+    if version_is_less_than "$is_core_ver" "$recommended"; then
+        runtime_doctor_warn "sing-box 版本: $is_core_ver 已达到最低兼容版本 $minimum，但低于推荐稳定版 $recommended"
+        runtime_doctor_info "升级前请先处理本次 doctor 列出的 1.14 配置兼容项."
+        return 1
+    fi
+    runtime_doctor_ok "sing-box 版本: $is_core_ver，已达到推荐稳定版基线 $recommended"
 }
 
 runtime_doctor_cloudflared_version() {
@@ -717,7 +728,7 @@ runtime_doctor() {
             msg "10) jq 版本偏旧：请通过系统包管理器升级，或重新安装脚本以获取已校验的 jq 1.8.2"
         fi
         if [[ $warn_core_version -eq 1 ]]; then
-            msg "11) sing-box 版本偏旧：执行 sb update core 升级到最新稳定版"
+            msg "11) sing-box 版本未达推荐稳定基线：先处理上方兼容项，再执行 sb update core"
         fi
         if [[ $warn_sing_box_compat -eq 1 ]]; then
             msg "12) 配置兼容：先执行 sb backup create pre-migrate，再按上方文件清单迁移；普通旧 DNS address 可由核心更新安全转换"

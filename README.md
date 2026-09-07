@@ -105,20 +105,22 @@ sb status   # 查看运行状态
 - Trojan 和 VMess-QUIC 只使用 `pcs` 固定证书，不再导出 `insecure/allowInsecure`。
 - Hysteria2 按官方格式使用 `insecure=1 + pinSHA256`；TUIC 通用链接使用 `insecure=1 + pcs`。这两类链接不会允许缺少固定指纹的单独 `insecure`。
 - v2rayN 的 sing-box 出站暂不会把 URI 的 `pcs` 映射为 sing-box 公钥指纹，因此 `sb info <配置名>` 会继续输出 `certificate_public_key_sha256` 安全配置片段。
+- 客户端建议至少使用 v2rayN `7.24.9` 和 Xray-core `26.7.11`；前者修复旧内置下载器的中间人风险，后者修复证书固定相关问题。
+- 截至 2026-09-07，v2rayN `7.25.0` 已增加 sing-box 1.14 配置支持，但仍是预发布版；稳定版用户可暂时继续使用 Xray 内核，或等待 v2rayN 正式版。
 - 如果证书指纹无法计算，脚本会拒绝生成该节点的 URL、二维码和订阅条目，不会退回到不验证证书。
 - 脚本更新后，客户端中已经导入的旧节点不会自动刷新；请重新运行 `sb url <配置名>` 或重新生成订阅后导入。
 
-兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.6](https://github.com/2dust/v2rayN/releases/tag/7.24.6)、[Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
+兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.9](https://github.com/2dust/v2rayN/releases/tag/7.24.9)、[v2rayN 7.25.0](https://github.com/2dust/v2rayN/releases/tag/7.25.0)、[Xray-core v26.7.28](https://github.com/XTLS/Xray-core/releases/tag/v26.7.28)、[Xray 证书固定安全公告](https://github.com/XTLS/Xray-core/security/advisories/GHSA-5wf9-h793-w73c)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
 
 ### 4.2 安全更新与 sing-box 1.14 兼容
 
 - 官方组件从 GitHub Release 下载，并校验 Release 资源的 SHA-256；校验值缺失或不匹配时不会替换本机文件。
 - 核心和 Caddy 更新会先校验候选文件及现有配置，替换后检查服务状态，异常时自动恢复旧版本。
 - 脚本更新会保留安装清单、配置快照和 Reality 域名池数据；cloudflared 更新后会检查已有隧道服务。
-- cloudflared `2026.8.0` 和 `2026.8.1` 存在官方确认的 HTTP 路径处理问题，更新器会拒绝安装；`sb doctor` 也会提醒已安装用户升级到 `2026.8.2` 或更高版本。
-- `sb doctor` 会检查 sing-box 是否达到建议最低稳定版 `1.13.19`，并按文件列出旧 DNS server、FakeIP、DNS 规则、缓存字段和内联 ACME 等兼容风险。
+- cloudflared `2026.8.0` 和 `2026.8.1` 存在官方确认的 HTTP 路径处理问题，更新器会拒绝安装；安全下限为 `2026.8.2`，截至 2026-09-07 已复核的最新稳定版为 `2026.8.3`。
+- `sb doctor` 会区分 sing-box 最低兼容版 `1.13.19` 和推荐稳定版 `1.14.0`，并按文件列出旧 DNS server、FakeIP、DNS 规则、缓存字段和内联 ACME 等兼容风险。
 - 普通主配置 `dns.servers[].address` 可由 `sb update core` 安全迁移；特殊 DNS server、节点目录中的旧 DNS 格式或 1.14 冲突规则会在更新前被阻止并要求手动处理。
-- 默认更新继续跟随 sing-box 正式稳定版，不自动安装 1.14 beta；1.14 新增但计划在 1.16 移除的弃用字段会提前提示，方便逐步清理。
+- sing-box `1.14.0` 已是正式稳定版；默认更新会在兼容预检通过后安装，不自动跟随 `1.15` alpha。计划在 1.16 移除的弃用字段会继续提前提示。
 
 ---
 
@@ -138,6 +140,7 @@ sb status   # 查看运行状态
 │  ├─ check-release.sh                # 检查版本号与发布说明
 │  ├─ lint.sh                         # 本地 lint 汇总入口
 │  ├─ regression-cli.sh               # 可重复执行的 CLI 回归检查
+│  ├─ test-sing-box-release.sh         # 用推荐稳定核心校验代表配置
 │  ├─ smoke.sh                        # 基础 smoke 检查
 │  └─ smoke-reality.sh                # Reality 专项 smoke 检查
 ├─ .github
@@ -282,13 +285,14 @@ cd sing-box
 ```bash
 bash scripts/lint.sh
 bash scripts/check-release.sh
+bash scripts/test-sing-box-release.sh
 bash scripts/smoke.sh
 bash scripts/regression-cli.sh
 # 可选：真实环境下
 bash scripts/smoke-reality.sh
 ```
 
-`smoke-reality.sh` 会创建并删除 Reality 测试节点，请只在测试机执行。
+`test-sing-box-release.sh` 会下载并校验当前推荐稳定核心，然后检查 DNS 迁移结果与代表节点配置；需要访问 GitHub Release。`smoke-reality.sh` 会创建并删除 Reality 测试节点，请只在测试机执行。
 完整 VPS 回归清单见 [docs/VPS_REGRESSION.md](./docs/VPS_REGRESSION.md)。
 
 如果只想安全检查只读命令，运行：
@@ -332,7 +336,7 @@ ALLOW_WRITES=1 bash scripts/regression-cli.sh
 ### 9.1 CI
 
 - `.github/workflows/lint.yml`
-- 执行：`shellcheck` + `shfmt` + 结构检查
+- 执行：`shellcheck` + `shfmt` + 结构/分享链接/发布检查 + 推荐 sing-box 真实核心配置校验
 
 ### 9.2 发布
 
