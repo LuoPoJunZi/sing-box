@@ -5,10 +5,10 @@ write_create() {
         server)
             is_tls=none
             get new
-            is_listen='listen: "::"'
+            is_listen="::"
 
             if [[ $is_new_protocol == 'CFtunnel' ]]; then
-                is_listen='listen: "127.0.0.1"'
+                is_listen="127.0.0.1"
             fi
 
             local safe_remark="${custom_remark//\//_}"
@@ -19,7 +19,7 @@ write_create() {
             if [[ $host ]]; then
                 is_config_name=$2-${safe_remark}-${host}.json
                 if [[ $is_new_protocol != 'CFtunnel' ]]; then
-                    is_listen='listen: "127.0.0.1"'
+                    is_listen="127.0.0.1"
                 fi
             else
                 is_config_name=$2-${safe_remark}-${port}.json
@@ -27,13 +27,11 @@ write_create() {
 
             is_json_file=$is_conf_dir/$is_config_name
 
-            if [[ $is_change || ! $json_str ]]; then
-                get protocol $2
-            fi
-            if [[ $net == "reality" ]]; then
-                is_add_public_key=",outbounds:[{type:\"direct\"},{tag:\"public_key_$is_public_key\",type:\"direct\"}]"
-            fi
-            is_new_json=$(jq "{inbounds:[{tag:\"$is_config_name\",type:\"$is_protocol\",$is_listen,listen_port:$port,$json_str}]$is_add_public_key}" <<< {})
+            node_prepare_protocol "$2" || return 1
+            is_new_json=$(node_build_config) || {
+                err "节点配置生成失败"
+                return 1
+            }
             if [[ $is_test_json ]]; then
                 return
             fi
@@ -53,12 +51,21 @@ write_create() {
                 return
             fi
 
+            case $net in
+                tuic | trojan | hysteria2 | quic | h2)
+                    runtime_ensure_tls || {
+                        err "TLS 证书生成失败，未写入节点配置"
+                        return 1
+                    }
+                    ;;
+            esac
+
             if [[ $is_config_file ]]; then
                 is_no_del_msg=1
                 del $is_config_file
             fi
 
-            cat <<< $is_new_json > $is_json_file
+            printf '%s\n' "$is_new_json" > "$is_json_file" || return 1
 
             if [[ $is_new_protocol == 'CFtunnel' && $cf_token ]]; then
                 install_cloudflared

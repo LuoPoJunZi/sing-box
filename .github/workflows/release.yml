@@ -5,16 +5,31 @@ on:
     branches:
       - main
     paths:
+      - '*.sh'
       - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.editorconfig'
       - 'RELEASE_NOTES.md'
-      - '.github/workflows/release.yml'
+      - '.github/workflows/**'
   workflow_dispatch: # 手动触发按钮
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  checks:
+    uses: ./.github/workflows/lint.yml
+
   build-and-release:
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -89,7 +104,7 @@ jobs:
         if: env.should_release == 'true'
         # 将压缩包先生成在上一层目录，彻底避开“文件正在变化”的冲突，然后再移回来
         run: |
-          tar --exclude=".git" --exclude=".github" -zcvf ../code.tar.gz .
+          tar -zcf ../code.tar.gz install.sh sing-box.sh src scripts tests LICENSE README.md README.en.md CONTRIBUTING.md RELEASE_NOTES.md docs
           mv ../code.tar.gz ./
 
       - name: Create Release

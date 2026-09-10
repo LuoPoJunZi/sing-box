@@ -3,7 +3,8 @@
 query_info() {
     local encoded_remark="" encoded_user="" server_address="" tls_server_name="" uri_query=""
 
-    if [[ ! $is_protocol ]]; then get info $1; fi
+    is_url=
+    if [[ ! $is_protocol ]]; then get info "$1" || return 1; fi
     is_value_style=$blue
     is_insecure=
     is_type=

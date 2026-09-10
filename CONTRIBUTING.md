@@ -43,21 +43,26 @@ Admin layering rule:
 
 ## Quality Checks
 
+Start with `bash scripts/lint.sh` for all offline checks. `bash scripts/test.sh` runs only offline tests.
+The real-core test and VPS tests are explicit opt-in commands; ordinary lint never installs services or accesses GitHub.
+New tests should go into `tests/unit/` or `tests/integration/`, with reusable input in `tests/fixtures/`.
+See [Architecture](docs/ARCHITECTURE.md) for module boundaries and a reproducible diagnostic benchmark.
+
 CI now runs:
 
 - `scripts/check-shell.sh` (warning-level ShellCheck; sourced modules only exclude cross-file global/source analysis rules)
-- `scripts/test-install-cli.sh`
-- `scripts/test-dispatch.sh`
-- `scripts/test-runtime-safety.sh`
-- `scripts/test-download-security.sh`
-- `scripts/test-dns-migration.sh`
-- `scripts/test-update-transaction.sh`
-- `scripts/test-upstream-compat.sh`
-- `scripts/test-sing-box-release.sh` (downloads the verified sing-box 1.14.0 release and validates representative configurations)
+- `tests/integration/test-install-cli.sh`
+- `tests/unit/test-dispatch.sh`
+- `tests/integration/test-runtime-safety.sh`
+- `tests/unit/test-download-security.sh`
+- `tests/unit/test-dns-migration.sh`
+- `tests/integration/test-update-transaction.sh`
+- `tests/unit/test-upstream-compat.sh`
+- `tests/integration/test-sing-box-release.sh` (downloads the verified sing-box 1.14.0 release and validates representative configurations)
 - `shfmt -d -i 4 -ci -sr`
 - `scripts/check-structure.sh`
 - `scripts/check-share-links.sh`
-- `scripts/test-share-output.sh`
+- `tests/integration/test-share-output.sh`
 - `scripts/check-release.sh`
 
 Please run equivalent checks locally before opening a PR.
@@ -67,7 +72,7 @@ Local helper:
 
 - `bash scripts/check-shell.sh`
 - `bash scripts/lint.sh`
-- `bash scripts/smoke.sh`
+- `bash tests/e2e/smoke.sh`
 
 ## Commit/PR Guidance
 

@@ -83,6 +83,21 @@ check_lib_targets
 check_runtime_util_targets
 check_admin_dispatch_split
 
+# Source-only modules must not drift back into write-side preparation.
+if grep -Eq 'node_prepare_protocol|install_service|systemctl[[:space:]]+(start|restart)|admin_reinstall' src/core/query/*.sh; then
+    echo "[structure] query modules must not perform write-side preparation"
+    fail=1
+fi
+for module in output system compat clients run; do
+    check_file "src/core/runtime/doctor/$module.sh"
+done
+for test_group in unit integration e2e fixtures; do
+    if [[ ! -d tests/$test_group ]]; then
+        echo "[structure] missing test group: $test_group"
+        fail=1
+    fi
+done
+
 if [[ $fail -ne 0 ]]; then
     echo "[structure] failed"
     exit 1

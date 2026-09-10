@@ -1,25 +1,12 @@
 name: Shell Lint
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "*.sh"
-      - "src/**/*.sh"
-      - "scripts/**/*.sh"
-      - ".editorconfig"
-      - "CONTRIBUTING.md"
-      - ".github/workflows/lint.yml"
   pull_request:
-    paths:
-      - "*.sh"
-      - "src/**/*.sh"
-      - "scripts/**/*.sh"
-      - ".editorconfig"
-      - "CONTRIBUTING.md"
-      - ".github/workflows/lint.yml"
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   shellcheck:
@@ -37,26 +24,8 @@ jobs:
       - name: Run shellcheck
         run: bash scripts/check-shell.sh
 
-      - name: Test installer CLI
-        run: bash scripts/test-install-cli.sh
-
-      - name: Test command dispatch
-        run: bash scripts/test-dispatch.sh
-
-      - name: Test runtime safety
-        run: bash scripts/test-runtime-safety.sh
-
-      - name: Test download security
-        run: bash scripts/test-download-security.sh
-
-      - name: Test DNS migration
-        run: bash scripts/test-dns-migration.sh
-
-      - name: Test update transaction
-        run: bash scripts/test-update-transaction.sh
-
-      - name: Test upstream compatibility
-        run: bash scripts/test-upstream-compat.sh
+      - name: Run offline tests
+        run: bash scripts/test.sh
 
   shfmt:
     name: shfmt
@@ -72,7 +41,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts
+          shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts tests
 
   sing-box-compat:
     name: recommended sing-box config
@@ -87,7 +56,7 @@ jobs:
           sudo apt-get install -y jq
 
       - name: Validate project configurations with the recommended sing-box release
-        run: bash scripts/test-sing-box-release.sh
+        run: bash tests/integration/test-sing-box-release.sh
 
   structure:
     name: structure
@@ -115,7 +84,7 @@ jobs:
       - name: Check share link helpers and fields
         run: |
           bash scripts/check-share-links.sh
-          bash scripts/test-share-output.sh
+          bash tests/integration/test-share-output.sh
 
   release:
     name: release

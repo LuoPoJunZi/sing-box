@@ -7,7 +7,7 @@ query_get() {
             if [[ ! $is_addr ]]; then
                 get_ip
                 is_addr=$ip
-                if [[ $(grep ":" <<< $ip) ]]; then is_addr="[$ip]"; fi
+                if [[ $ip == *:* ]]; then is_addr="[$ip]"; fi
             fi
             ;;
         new)
@@ -38,28 +38,10 @@ query_get() {
         info)
             get file $2
             if [[ $is_config_file ]]; then
-                is_json_str=$(cat $is_conf_dir/"$is_config_file" | sed s#//.*##)
-                is_json_data=$(jq '(.inbounds[0]|.type,.listen_port,(.users[0]|.uuid,.password,.username),.method,.password,.override_port,.override_address,(.transport|.type,.path,.headers.host),(.tls|.server_name,.reality.private_key,.reality.short_id[0])),(.outbounds[1].tag)' <<< $is_json_str)
-                if [[ $? != 0 ]]; then err "无法读取此文件: $is_config_file"; fi
-                is_up_var_set=(null is_protocol port uuid password username ss_method ss_password door_port door_addr net_type path host is_servername is_private_key is_short_id is_public_key)
-                if [[ $is_debug ]]; then msg "\n------------- debug: $is_config_file -------------"; fi
-                i=0
-                local json_items=()
-                mapfile -t json_items < <(sed 's/""/null/g;s/"//g' <<< "$is_json_data")
-                for v in "${json_items[@]}"; do
-                    ((i++))
-                    if [[ $is_debug ]]; then msg "$i-${is_up_var_set[$i]}: $v"; fi
-                    export "${is_up_var_set[$i]}=${v}"
-                done
-                for v in "${is_up_var_set[@]}"; do
-                    if [[ ${!v} == 'null' ]]; then unset "$v"; fi
-                done
-
-                if [[ $is_private_key ]]; then
-                    is_reality=1
-                    net_type+=reality
-                    is_public_key=${is_public_key/public_key_/}
-                fi
+                query_read_node "$is_conf_dir/$is_config_file" || {
+                    err "无法读取此文件: $is_config_file"
+                    return 1
+                }
                 is_socks_user=$username
                 is_socks_pass=$password
                 is_config_name=$is_config_file
@@ -70,11 +52,8 @@ query_get() {
                 if [[ $host && ! -f $is_caddy_conf/$host.conf ]]; then is_no_auto_tls=1; fi
                 if [[ $is_tmp_https_port ]]; then is_https_port=$is_tmp_https_port; fi
                 if [[ $is_client && $host ]]; then port=$is_https_port; fi
-                get protocol $is_protocol-$net_type
+                query_protocol_metadata
             fi
-            ;;
-        protocol)
-            query_prepare_protocol "$2"
             ;;
         host-test)
             if [[ $is_no_auto_tls || $is_gen || $is_dont_test_host ]]; then return; fi
@@ -92,7 +71,7 @@ query_get() {
             fi
             ;;
         ssss | ss2022)
-            if [[ $(grep 128 <<< $ss_method) ]]; then
+            if [[ $ss_method == *128* ]]; then
                 $is_core_bin generate rand 16 --base64
             else
                 $is_core_bin generate rand 32 --base64
@@ -100,54 +79,8 @@ query_get() {
             ;;
         ping)
             is_dns_type="a"
-            if [[ $(grep ":" <<< $ip) ]]; then is_dns_type="aaaa"; fi
+            if [[ $ip == *:* ]]; then is_dns_type="aaaa"; fi
             is_host_dns=$(_wget -qO- --header="accept: application/dns-json" "https://one.one.one.one/dns-query?name=$host&type=$is_dns_type")
-            ;;
-        install-caddy)
-            _green "\n安装 Caddy 实现自动配置 TLS.\n"
-            download caddy
-            install_service caddy &> /dev/null
-            is_caddy=1
-            _green "安装 Caddy 成功.\n"
-            ;;
-        reinstall)
-            is_install_sh=$(cat $is_sh_dir/install.sh)
-            uninstall
-            bash <<< $is_install_sh
-            ;;
-        test-run)
-            systemctl list-units --full -all &> /dev/null
-            if [[ $? != 0 ]]; then
-                _yellow "\n无法执行测试, 请检查 systemctl 状态.\n"
-                return
-            fi
-            is_no_manage_msg=1
-            if [[ ! $(pgrep -f $is_core_bin) ]]; then
-                _yellow "\n测试运行 $is_core_name ..\n"
-                manage start &> /dev/null
-                if [[ $is_run_fail == "$is_core" ]]; then
-                    _red "$is_core_name 运行失败信息:"
-                    $is_core_bin run -c $is_config_json -C $is_conf_dir
-                else
-                    _green "\n测试通过, 已启动 $is_core_name ..\n"
-                fi
-            else
-                _green "\n$is_core_name 正在运行, 跳过测试\n"
-            fi
-            if [[ $is_caddy ]]; then
-                if [[ ! $(pgrep -f $is_caddy_bin) ]]; then
-                    _yellow "\n测试运行 Caddy ..\n"
-                    manage start caddy &> /dev/null
-                    if [[ $is_run_fail == 'caddy' ]]; then
-                        _red "Caddy 运行失败信息:"
-                        $is_caddy_bin run --config $is_caddyfile
-                    else
-                        _green "\n测试通过, 已启动 Caddy ..\n"
-                    fi
-                else
-                    _green "\nCaddy 正在运行, 跳过测试\n"
-                fi
-            fi
             ;;
     esac
 }

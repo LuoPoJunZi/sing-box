@@ -40,7 +40,10 @@ runtime_manage() {
         return
     fi
 
-    systemctl $is_do $is_do_name
+    if [[ $is_do_name == caddy && $is_do == @(start|restart) ]]; then
+        runtime_repair_caddy_service || return 1
+    fi
+    systemctl "$is_do" "$is_do_name"
 
     if [[ $is_test_run && ! $is_new_install ]]; then
         sleep 2
@@ -53,6 +56,45 @@ runtime_manage() {
                 get test-run
                 _yellow "测试结束, 请按 Enter 退出."
             fi
+        fi
+    fi
+}
+
+runtime_test_run() {
+    if [[ ${is_dry_run:-} ]]; then
+        msg "DRY-RUN: 将测试启动服务"
+        return 0
+    fi
+    systemctl list-units --full -all &> /dev/null
+    if [[ $? != 0 ]]; then
+        _yellow "\n无法执行测试, 请检查 systemctl 状态.\n"
+        return
+    fi
+    is_no_manage_msg=1
+    if [[ ! $(pgrep -f $is_core_bin) ]]; then
+        _yellow "\n测试运行 $is_core_name ..\n"
+        manage start &> /dev/null
+        if [[ $is_run_fail == "$is_core" ]]; then
+            _red "$is_core_name 运行失败信息:"
+            $is_core_bin run -c $is_config_json -C $is_conf_dir
+        else
+            _green "\n测试通过, 已启动 $is_core_name ..\n"
+        fi
+    else
+        _green "\n$is_core_name 正在运行, 跳过测试\n"
+    fi
+    if [[ $is_caddy ]]; then
+        if [[ ! $(pgrep -f $is_caddy_bin) ]]; then
+            _yellow "\n测试运行 Caddy ..\n"
+            manage start caddy &> /dev/null
+            if [[ $is_run_fail == 'caddy' ]]; then
+                _red "Caddy 运行失败信息:"
+                $is_caddy_bin run --config $is_caddyfile
+            else
+                _green "\n测试通过, 已启动 Caddy ..\n"
+            fi
+        else
+            _green "\nCaddy 正在运行, 跳过测试\n"
         fi
     fi
 }

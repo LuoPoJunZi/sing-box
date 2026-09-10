@@ -126,6 +126,8 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
 
 ## 5. Repository Structure (Developer)
 
+See the [architecture guide](docs/ARCHITECTURE.md) for module boundaries, initialization rules, tests and measured performance.
+
 ```text
 .
 ├─ install.sh                         # one-click installer and bootstrap entry
@@ -135,14 +137,16 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
 ├─ CONTRIBUTING.md                    # contribution and development rules
 ├─ docs
 │  └─ VPS_REGRESSION.md               # real VPS regression checklist
-├─ scripts
-│  ├─ check-structure.sh              # validates sourced module targets
-│  ├─ check-release.sh                # validates version and release notes
-│  ├─ lint.sh                         # local lint wrapper
-│  ├─ regression-cli.sh               # repeatable CLI regression checks
-│  ├─ test-sing-box-release.sh         # validates representative configs with the recommended stable core
-│  ├─ smoke.sh                        # basic smoke checks
-│  └─ smoke-reality.sh                # Reality-focused smoke checks
+├─ scripts                           # lint, test, structure and benchmark entry points
+│  ├─ lint.sh
+│  ├─ test.sh
+│  ├─ benchmark-doctor.sh
+│  └─ check-*.sh
+├─ tests
+│  ├─ unit/                          # focused unit tests
+│  ├─ integration/                   # production generator, rollback and real core
+│  ├─ fixtures/                      # deterministic test inputs
+│  └─ e2e/                           # real VPS smoke and CLI regression
 ├─ .github
 │  └─ workflows
 │     ├─ lint.yml                     # GitHub Actions: Shell Lint
@@ -178,10 +182,13 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
       │  ├─ pool.sh                   # built-in/custom/disabled pool merge
       │  └─ store.sh                  # local domain-pool file initialization
       ├─ env
-      │  └─ defaults.sh               # protocols, change actions, built-in Reality domains
+      │  ├─ defaults.sh               # protocols, change actions, built-in Reality domains
+      │  └─ status.sh                 # read-only runtime status probes
       ├─ node
       │  ├─ add.sh                    # add-node main flow
       │  ├─ create.sh                 # sing-box JSON config writing
+      │  ├─ protocol.sh               # write-side parameter normalization
+      │  ├─ build.sh                  # safe JSON serialization
       │  ├─ delete.sh                 # node config deletion
       │  ├─ change.sh                 # change-node main flow
       │  ├─ add/prepare.sh            # add-node parameter preparation
@@ -189,12 +196,14 @@ The compatibility implementation follows the [v2rayN allowInsecure migration not
       ├─ query
       │  ├─ info.sh                   # node information display
       │  ├─ parse.sh                  # config reading and field parsing
-      │  ├─ protocol.sh               # protocol JSON fragment preparation
+      │  ├─ read.sh                   # single-pass field reading and protocol metadata
       │  ├─ tls_pin.sh                # TLS certificate pinning hints
       │  └─ url.sh                    # URL/QR/all-node output
       ├─ runtime
       │  ├─ cron.sh                   # automatic maintenance tasks
       │  ├─ doctor.sh                 # system diagnostics
+      │  ├─ doctor/                   # diagnostics grouped by responsibility
+      │  ├─ bootstrap.sh              # explicit TLS and service prerequisites
       │  ├─ manifest.sh               # install manifest display
       │  ├─ rollback.sh               # snapshot rollback
       │  ├─ service.sh                # service start/stop/restart
@@ -278,11 +287,11 @@ Example: changing Reality add behavior
 ```bash
 bash scripts/lint.sh
 bash scripts/check-release.sh
-bash scripts/test-sing-box-release.sh
-bash scripts/smoke.sh
-bash scripts/regression-cli.sh
+bash tests/integration/test-sing-box-release.sh
+bash tests/e2e/smoke.sh
+bash tests/e2e/regression-cli.sh
 # Optional on test host:
-bash scripts/smoke-reality.sh
+bash tests/e2e/smoke-reality.sh
 ```
 
 `test-sing-box-release.sh` downloads and verifies the currently recommended stable core, then checks DNS migration output and representative node configurations; it requires GitHub Release access. `smoke-reality.sh` creates and removes Reality test nodes; run it on test environments only.
@@ -291,7 +300,7 @@ Full VPS regression steps are documented in [docs/VPS_REGRESSION.md](./docs/VPS_
 For read-only CLI checks:
 
 ```bash
-bash scripts/regression-cli.sh
+bash tests/e2e/regression-cli.sh
 ```
 
 `regression-cli.sh` also runs `NO_COLOR=1 sb doctor`, `sb manifest`, and `sb dry-run uninstall` to ensure diagnostics, manifest display, and uninstall preview work in real environments. Regular `sb doctor` prints a terminal color sample and checks protocol credentials, TLS files, and certificate-pin readiness. The regression script samples one `info/url` export for each protocol and transport combination.
@@ -299,7 +308,7 @@ bash scripts/regression-cli.sh
 On a disposable VPS where snapshot creation is allowed:
 
 ```bash
-ALLOW_WRITES=1 bash scripts/regression-cli.sh
+ALLOW_WRITES=1 bash tests/e2e/regression-cli.sh
 ```
 
 ---

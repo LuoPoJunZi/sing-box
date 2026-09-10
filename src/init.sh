@@ -4,7 +4,7 @@
 # ==========================================
 
 author="LuoPoJunZi"
-is_sh_ver="v26.9.7"
+is_sh_ver="v26.9.10"
 is_sh_repo="LuoPoJunZi/sing-box"
 
 # --- 1. 终端 UI 颜色定义 ---
@@ -95,7 +95,7 @@ is_core_repo="SagerNet/$is_core"
 is_conf_dir="$is_core_dir/conf"
 is_log_dir="/var/log/$is_core"
 is_sh_bin="/usr/local/bin/$is_core"
-is_sh_dir="$is_core_dir/sh"
+is_sh_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 is_pkg="wget unzip tar qrencode"
 is_config_json="$is_core_dir/config.json"
@@ -105,7 +105,6 @@ is_caddy_dir="/etc/caddy"
 is_caddy_repo="caddyserver/caddy"
 is_caddyfile="$is_caddy_dir/Caddyfile"
 is_caddy_conf="$is_caddy_dir/$author"
-is_caddy_service=$(systemctl list-units --full -all 2> /dev/null | grep caddy.service)
 is_http_port=80
 is_https_port=443
 
@@ -115,7 +114,7 @@ load() {
     . "$is_sh_dir/src/$1"
 }
 _wget() { wget "$@"; }
-cmd=$(command -v apt-get || command -v yum || command -v zypper)
+cmd=$(command -v apt-get || command -v yum || command -v zypper || true)
 
 case $(uname -m) in
     amd64 | x86_64) is_arch="amd64" ;;
@@ -126,47 +125,11 @@ esac
 # 提前加载超级工具箱，提供基础功能
 load utils.sh
 
-# --- 4. 运行状态与前置检查 ---
-is_core_ver=$($is_core_bin version 2> /dev/null | head -n1 | cut -d " " -f3)
-
-# 自动生成缺失的 TLS 证书 (仅用于内部交互)
+# Loading modules never generates certificates or repairs services.
 is_tls_cer="$is_core_dir/bin/tls.cer"
 is_tls_key="$is_core_dir/bin/tls.key"
-if [[ ! -f $is_tls_cer || ! -f $is_tls_key ]]; then
-    is_tls_tmp="${is_tls_key/key/tmp}"
-    $is_core_bin generate tls-keypair tls -m 456 > "$is_tls_tmp" 2> /dev/null
-    awk '/BEGIN PRIVATE KEY/,/END PRIVATE KEY/' "$is_tls_tmp" > "$is_tls_key"
-    awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' "$is_tls_tmp" > "$is_tls_cer"
-    rm -f "$is_tls_tmp"
-fi
-
-if systemctl is-active --quiet "$is_core" 2> /dev/null || pgrep -f "$is_core_bin" > /dev/null; then
-    is_core_status="$(ui_ok_badge) $(_green "running")"
-else
-    is_core_status="$(ui_stop_badge) $(_red "stopped")"
-    is_core_stop=1
-fi
-
-if [[ -f $is_caddy_bin && -d $is_caddy_dir && $is_caddy_service ]]; then
-    is_caddy=1
-    # 修复 Caddy 启动参数
-    if ! grep -q '\-\-adapter caddyfile' /lib/systemd/system/caddy.service; then
-        install_service caddy
-        systemctl restart caddy &> /dev/null &
-    fi
-    is_caddy_ver=$($is_caddy_bin version 2> /dev/null | head -n1 | cut -d " " -f1)
-    is_tmp_http_port=$(grep -E '^ {2,}http_port|^http_port' "$is_caddyfile" 2> /dev/null | grep -oE '[0-9]+')
-    is_tmp_https_port=$(grep -E '^ {2,}https_port|^https_port' "$is_caddyfile" 2> /dev/null | grep -oE '[0-9]+')
-    [[ $is_tmp_http_port ]] && is_http_port=$is_tmp_http_port
-    [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
-
-    if systemctl is-active --quiet caddy 2> /dev/null || pgrep -f "$is_caddy_bin" > /dev/null; then
-        is_caddy_status="$(ui_ok_badge) $(_green "running")"
-    else
-        is_caddy_status="$(ui_stop_badge) $(_red "stopped")"
-        is_caddy_stop=1
-    fi
-fi
-
-# --- 5. 加载核心业务逻辑 ---
 load core.sh
+case ${1:-} in
+    h | help | --help) ;;
+    *) runtime_refresh_status ;;
+esac

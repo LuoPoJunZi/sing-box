@@ -126,6 +126,8 @@ sb status   # 查看运行状态
 
 ## 5. 仓库结构（开发者必读）
 
+详细的模块边界、初始化规则、测试分层和实测性能见 [架构指南](docs/ARCHITECTURE.md)。
+
 ```text
 .
 ├─ install.sh                         # 一键安装入口，负责下载、安装、初始化服务
@@ -135,14 +137,16 @@ sb status   # 查看运行状态
 ├─ CONTRIBUTING.md                    # 贡献与开发约定
 ├─ docs
 │  └─ VPS_REGRESSION.md               # 真实 VPS 回归测试清单
-├─ scripts
-│  ├─ check-structure.sh              # 检查模块加载目标是否存在
-│  ├─ check-release.sh                # 检查版本号与发布说明
-│  ├─ lint.sh                         # 本地 lint 汇总入口
-│  ├─ regression-cli.sh               # 可重复执行的 CLI 回归检查
-│  ├─ test-sing-box-release.sh         # 用推荐稳定核心校验代表配置
-│  ├─ smoke.sh                        # 基础 smoke 检查
-│  └─ smoke-reality.sh                # Reality 专项 smoke 检查
+├─ scripts                           # lint、测试、结构检查与性能基准入口
+│  ├─ lint.sh
+│  ├─ test.sh
+│  ├─ benchmark-doctor.sh
+│  └─ check-*.sh
+├─ tests
+│  ├─ unit/                          # 单元测试
+│  ├─ integration/                   # 生产生成器、更新回滚、真实核心
+│  ├─ fixtures/                      # 固定测试输入
+│  └─ e2e/                           # 真实 VPS smoke 和 CLI 回归
 ├─ .github
 │  └─ workflows
 │     ├─ lint.yml                     # GitHub Actions: Shell Lint
@@ -178,10 +182,13 @@ sb status   # 查看运行状态
       │  ├─ pool.sh                   # 内置/自定义/禁用域名聚合
       │  └─ store.sh                  # 域名池本地文件初始化
       ├─ env
-      │  └─ defaults.sh               # 协议列表、修改项、内置 Reality 域名池
+      │  ├─ defaults.sh               # 协议列表、修改项、内置 Reality 域名池
+      │  └─ status.sh                 # 只读运行状态探测
       ├─ node
       │  ├─ add.sh                    # 添加节点主流程
       │  ├─ create.sh                 # 写入 sing-box JSON 配置
+      │  ├─ protocol.sh               # 写入参数标准化
+      │  ├─ build.sh                  # 安全 JSON 序列化
       │  ├─ delete.sh                 # 删除节点配置
       │  ├─ change.sh                 # 修改节点主流程
       │  ├─ add/prepare.sh            # 添加节点前的参数准备
@@ -189,12 +196,14 @@ sb status   # 查看运行状态
       ├─ query
       │  ├─ info.sh                   # 节点信息展示
       │  ├─ parse.sh                  # 配置读取和字段解析
-      │  ├─ protocol.sh               # 协议 JSON 片段准备
+      │  ├─ read.sh                   # 一次读取节点字段，纯查询协议解释
       │  ├─ tls_pin.sh                # TLS 证书固定指纹提示
       │  └─ url.sh                    # URL/二维码/全部节点输出
       ├─ runtime
       │  ├─ cron.sh                   # 自动维护任务
       │  ├─ doctor.sh                 # 系统诊断
+      │  ├─ doctor/                   # 按职责分组的诊断实现
+      │  ├─ bootstrap.sh              # 显式证书初始化和服务修复
       │  ├─ manifest.sh               # 安装清单展示
       │  ├─ rollback.sh               # 快照回滚
       │  ├─ service.sh                # 启动/停止/重启服务
@@ -285,11 +294,11 @@ cd sing-box
 ```bash
 bash scripts/lint.sh
 bash scripts/check-release.sh
-bash scripts/test-sing-box-release.sh
-bash scripts/smoke.sh
-bash scripts/regression-cli.sh
+bash tests/integration/test-sing-box-release.sh
+bash tests/e2e/smoke.sh
+bash tests/e2e/regression-cli.sh
 # 可选：真实环境下
-bash scripts/smoke-reality.sh
+bash tests/e2e/smoke-reality.sh
 ```
 
 `test-sing-box-release.sh` 会下载并校验当前推荐稳定核心，然后检查 DNS 迁移结果与代表节点配置；需要访问 GitHub Release。`smoke-reality.sh` 会创建并删除 Reality 测试节点，请只在测试机执行。
@@ -298,7 +307,7 @@ bash scripts/smoke-reality.sh
 如果只想安全检查只读命令，运行：
 
 ```bash
-bash scripts/regression-cli.sh
+bash tests/e2e/regression-cli.sh
 ```
 
 `regression-cli.sh` 会同时执行 `NO_COLOR=1 sb doctor`、`sb manifest` 和 `sb dry-run uninstall`，用于确认诊断输出、安装清单展示和卸载预演都能在真实环境下正常工作；普通 `sb doctor` 会展示终端颜色样例，并检查协议身份字段、TLS 文件和证书固定状态。回归脚本会按“协议 + 传输方式”各抽查一个代表节点的 `info/url` 输出。
@@ -306,7 +315,7 @@ bash scripts/regression-cli.sh
 如果在一次性测试 VPS 上允许创建快照，运行：
 
 ```bash
-ALLOW_WRITES=1 bash scripts/regression-cli.sh
+ALLOW_WRITES=1 bash tests/e2e/regression-cli.sh
 ```
 
 ---

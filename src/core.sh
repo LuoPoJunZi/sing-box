@@ -18,20 +18,25 @@
 . "$is_sh_dir/src/core/runtime/manifest.sh"
 . "$is_sh_dir/src/core/runtime/doctor.sh"
 . "$is_sh_dir/src/core/runtime/service.sh"
+. "$is_sh_dir/src/core/runtime/bootstrap.sh"
+. "$is_sh_dir/src/core/env/status.sh"
 . "$is_sh_dir/src/core/runtime/cron.sh"
-. "$is_sh_dir/src/core/query/protocol.sh"
+. "$is_sh_dir/src/core/node/protocol.sh"
 . "$is_sh_dir/src/core/query/parse.sh"
+. "$is_sh_dir/src/core/query/read.sh"
 . "$is_sh_dir/src/core/query/uri.sh"
 . "$is_sh_dir/src/core/query/tls_pin.sh"
 . "$is_sh_dir/src/core/query/info.sh"
 . "$is_sh_dir/src/core/query/url.sh"
 . "$is_sh_dir/src/core/node/create.sh"
+. "$is_sh_dir/src/core/node/build.sh"
 . "$is_sh_dir/src/core/node/change.sh"
 . "$is_sh_dir/src/core/node/delete.sh"
 . "$is_sh_dir/src/core/node/add.sh"
 . "$is_sh_dir/src/core/sub/generate.sh"
 . "$is_sh_dir/src/core/admin/update.sh"
 . "$is_sh_dir/src/core/admin/uninstall.sh"
+. "$is_sh_dir/src/core/admin/maintenance.sh"
 . "$is_sh_dir/src/core/admin/menu_actions.sh"
 . "$is_sh_dir/src/core/admin/menu.sh"
 . "$is_sh_dir/src/core/admin/dispatch.sh"
@@ -52,7 +57,16 @@ change() { write_change "$@"; }
 
 del() { write_del "$@"; }
 
-get() { query_get "$@"; }
+get() {
+    # Legacy call adapter: keep write actions out of the query implementation.
+    case $1 in
+        protocol) node_prepare_protocol "$2" ;;
+        install-caddy) admin_install_caddy ;;
+        reinstall) admin_reinstall ;;
+        test-run) runtime_test_run ;;
+        *) query_get "$@" ;;
+    esac
+}
 
 info() { query_info "$@"; }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 . src/lib/version.sh
@@ -75,90 +75,26 @@ reality_output=$("$core_binary" generate reality-keypair 2> /dev/null) || fail "
 reality_private_key=$(awk '$1 == "PrivateKey:" {print $2}' <<< "$reality_output")
 [[ $reality_private_key ]] || fail "Reality private key was not found"
 
-jq -n '
-    {
-        inbounds: [
-            {
-                tag: "socks-test",
-                type: "socks",
-                listen: "127.0.0.1",
-                listen_port: 31001,
-                users: [{username: "test", password: "test-password"}]
-            },
-            {
-                tag: "shadowsocks-test",
-                type: "shadowsocks",
-                listen: "127.0.0.1",
-                listen_port: 31002,
-                method: "aes-128-gcm",
-                password: "test-password"
-            },
-            {
-                tag: "vmess-test",
-                type: "vmess",
-                listen: "127.0.0.1",
-                listen_port: 31003,
-                users: [{uuid: "00000000-0000-4000-8000-000000000001"}]
-            }
-        ]
-    }
-' > "$conf_dir/10-basic.json"
+. src/core/env/defaults.sh
+. src/core/node/protocol.sh
+. src/core/node/build.sh
+. src/core/node/create.sh
+. src/core/query/parse.sh
+. tests/fixtures/node-context.sh
+get() { query_get "$@"; }
+get_ip() { :; }
+get_reality_short_id() { :; }
+err() { fail "$@"; }
 
-jq -n --arg key "$tls_key_config" --arg cert "$tls_cert_config" '
-    {
-        inbounds: [
-            {
-                tag: "hysteria2-test",
-                type: "hysteria2",
-                listen: "127.0.0.1",
-                listen_port: 31004,
-                users: [{password: "test-password"}],
-                tls: {enabled: true, alpn: ["h3"], key_path: $key, certificate_path: $cert}
-            },
-            {
-                tag: "tuic-test",
-                type: "tuic",
-                listen: "127.0.0.1",
-                listen_port: 31005,
-                users: [{uuid: "00000000-0000-4000-8000-000000000002", password: "test-password"}],
-                congestion_control: "bbr",
-                tls: {enabled: true, alpn: ["h3"], key_path: $key, certificate_path: $cert}
-            },
-            {
-                tag: "trojan-test",
-                type: "trojan",
-                listen: "127.0.0.1",
-                listen_port: 31006,
-                users: [{password: "test-password"}],
-                tls: {enabled: true, key_path: $key, certificate_path: $cert}
-            }
-        ]
-    }
-' > "$conf_dir/20-tls.json"
-
-jq -n --arg private_key "$reality_private_key" '
-    {
-        inbounds: [
-            {
-                tag: "reality-test",
-                type: "vless",
-                listen: "127.0.0.1",
-                listen_port: 31007,
-                users: [{flow: "xtls-rprx-vision", uuid: "00000000-0000-4000-8000-000000000003"}],
-                tls: {
-                    enabled: true,
-                    server_name: "www.cloudflare.com",
-                    reality: {
-                        enabled: true,
-                        handshake: {server: "www.cloudflare.com", server_port: 443},
-                        private_key: $private_key,
-                        short_id: ["0123abcd"]
-                    }
-                }
-            }
-        ]
-    }
-' > "$conf_dir/30-reality.json"
+# Exercise the same normalizer and serializer as sb add, in an isolated context.
+for protocol in "${protocol_list[@]}" Direct; do
+    (
+        set +u # Production modules intentionally use optional, unset context fields.
+        fixture_node_context "$protocol"
+        write_create server "$protocol"
+        printf '%s\n' "$is_new_json" > "$conf_dir/$protocol.json"
+    ) || fail "production generation failed: $protocol"
+done
 
 legacy_config="$tmp_dir/legacy.json"
 modern_config="$tmp_dir/config.json"
@@ -176,7 +112,7 @@ cat > "$legacy_config" << 'EOF'
 }
 EOF
 
-if "$core_binary" check -c "$legacy_config" -C "$conf_dir" > /dev/null 2>&1; then
+if "$core_binary" check -c "$legacy_config" > /dev/null 2>&1; then
     fail "sing-box $compat_tag unexpectedly accepted the removed legacy DNS format"
 fi
 
@@ -192,6 +128,11 @@ jq -e '
     and .dns.servers[1] == {tag: "local", type: "local"}
 ' "$modern_config" > /dev/null || fail "migrated DNS structure is not the expected 1.14 format"
 
-"$core_binary" check -c "$modern_config" -C "$conf_dir" > /dev/null 2>&1 || fail "project configurations failed sing-box $compat_tag validation"
+for node_file in "$conf_dir"/*.json; do
+    "$core_binary" check -c "$modern_config" -c "$node_file" > "$tmp_dir/check.log" 2>&1 || {
+        cat "$tmp_dir/check.log"
+        fail "production configuration failed sing-box $compat_tag validation: ${node_file##*/}"
+    }
+done
 
 echo "[sing-box-release] ok: $compat_tag"

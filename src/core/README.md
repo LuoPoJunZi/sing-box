@@ -38,3 +38,12 @@ This folder contains the refactored core modules for the sing-box management scr
 - `src/core.sh` loads the directory-based modules directly.
 - Modules expose prefixed internal functions (`ui_*`, `validate_*`, `query_*`, `write_*`, `admin_*`).
 - Keep behavior unchanged when moving logic between files.
+
+## Configuration and Initialization Boundaries
+
+- `node/protocol.sh` normalizes write-side parameters; `node/build.sh` serializes them using jq arguments.
+- `query/read.sh` reads fields without generating keys or configuration.
+- `env/status.sh` performs read-only probes; `runtime/bootstrap.sh` owns explicit certificate/service prerequisites.
+- `runtime/doctor/` separates output, system checks, compatibility, client checks and orchestration.
+- Offline tests live in `tests/unit` and `tests/integration`; run `bash scripts/test.sh`.
+- See [the architecture guide](../../docs/ARCHITECTURE.md) for lifecycle rules, benchmarks and migration notes.

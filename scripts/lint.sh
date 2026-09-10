@@ -4,51 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-if ! command -v shfmt > /dev/null 2>&1; then
-    echo "shfmt not found. Please install shfmt first."
-    exit 1
-fi
-
 echo "[lint] shellcheck"
 bash scripts/check-shell.sh
-
-echo "[lint] installer cli"
-bash scripts/test-install-cli.sh
-
-echo "[lint] command dispatch"
-bash scripts/test-dispatch.sh
-
-echo "[lint] runtime safety"
-bash scripts/test-runtime-safety.sh
-
-echo "[lint] download security"
-bash scripts/test-download-security.sh
-
-echo "[lint] dns migration"
-bash scripts/test-dns-migration.sh
-
-echo "[lint] update transaction"
-bash scripts/test-update-transaction.sh
-
-echo "[lint] upstream compatibility"
-bash scripts/test-upstream-compat.sh
-
 echo "[lint] shfmt"
-shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts
-
-echo "[lint] structure"
-scripts/check-structure.sh
-
-echo "[lint] share links"
+shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts tests
+bash scripts/check-structure.sh
 bash scripts/check-share-links.sh
-
-echo "[lint] share output"
-bash scripts/test-share-output.sh
-
-echo "[lint] release"
 bash scripts/check-release.sh
-
-echo "[lint] regression script syntax"
-bash -n scripts/regression-cli.sh
-
+bash scripts/test.sh
 echo "[lint] done"
