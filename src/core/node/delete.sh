@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# Cleanup only after a replacement config has committed successfully.
+write_cleanup_replaced_node() {
+    local previous_name=$1 previous_port=$2
+    if [[ $previous_name == *CFtunnel* && $previous_port =~ ^[0-9]+$ &&
+        ($is_new_protocol != CFtunnel || $previous_port != "$port") ]]; then
+        systemctl disable --now "cftunnel-${previous_port}.service" &> /dev/null
+        rm -f -- "/lib/systemd/system/cftunnel-${previous_port}.service"
+        systemctl daemon-reload
+    fi
+    if [[ ${is_caddy:-} && ${old_host:-} && $old_host != "${host:-}" &&
+        $old_host =~ ^[a-zA-Z0-9.-]+$ && -d $is_caddy_conf ]]; then
+        rm -f -- "$is_caddy_conf/$old_host.conf" "$is_caddy_conf/$old_host.conf.add"
+    fi
+    return 0
+}
+
 write_del() {
     is_dont_get_ip=1
     if [[ $is_conf_dir_empty ]]; then
@@ -9,7 +25,7 @@ write_del() {
         get info $1
     fi
     if [[ $is_config_file ]]; then
-        snapshot_ensure "write-del"
+        snapshot_ensure "write-del" || return 1
         if [[ $is_dry_run ]]; then
             msg "DRY-RUN: 将删除配置文件 -> $is_conf_dir/$is_config_file"
             return

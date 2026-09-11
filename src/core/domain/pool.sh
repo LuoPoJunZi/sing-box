@@ -27,7 +27,7 @@ domain_collect_pool() {
         domain_is_disabled "$d" && continue
         [[ $r != "global" && $r != "$region" ]] && continue
         seen["$d"]="custom|$w|$r"
-    done < "$domain_custom_file"
+    done < <(if [[ -f $domain_custom_file ]]; then cat -- "$domain_custom_file"; fi)
 
     for d in "${!seen[@]}"; do
         echo "$d|${seen[$d]}"

@@ -525,7 +525,10 @@ EOF
     # 强制在静默模式下创建节点，防止备注卡死
     # shellcheck disable=SC2034
     is_main_start=
-    add reality
+    if ! add reality; then
+        err "初始节点配置生成或校验失败，安装未完成。请检查上方错误后重试。"
+        return 1
+    fi
 
     exit_and_del_tmpdir ok
 }

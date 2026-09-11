@@ -3,7 +3,10 @@
 write_change_key_action() {
     is_new_private_key=$3
     is_new_public_key=$4
-    if [[ ! $is_reality ]]; then err "($is_config_file) 不支持更改密钥."; fi
+    if [[ ! $is_reality ]]; then
+        err "($is_config_file) 不支持更改密钥."
+        return 1
+    fi
     if [[ $is_dry_run ]]; then
         if [[ $is_auto ]]; then
             msg "DRY-RUN: 将自动生成新的 Reality 密钥对并写入配置: $is_config_file"
@@ -13,33 +16,37 @@ write_change_key_action() {
         return
     fi
     if [[ $is_auto ]]; then
-        get_pbk
-        add $net
+        get_pbk || return 1
+        add "$net"
     else
-        if [[ $is_new_private_key && ! $is_new_public_key ]]; then err "无法找到 Public key."; fi
+        if [[ $is_new_private_key && ! $is_new_public_key ]]; then
+            err "无法找到 Public key."
+            return 1
+        fi
         if [[ ! $is_new_private_key ]]; then ask string is_new_private_key "请输入新 Private key"; fi
         if [[ ! $is_new_public_key ]]; then ask string is_new_public_key "请输入新 Public key"; fi
-        if [[ $is_new_private_key == "$is_new_public_key" ]]; then err "Private key 和 Public key 不能一样."; fi
-        is_tmp_json=$is_conf_dir/$is_config_file-$uuid
-        cp -f $is_conf_dir/$is_config_file $is_tmp_json
-        sed -i s#$is_private_key #$is_new_private_key# $is_tmp_json
-        $is_core_bin check -c $is_tmp_json &> /dev/null
-        if [[ $? != 0 ]]; then
-            is_key_err=1
-            is_key_err_msg="Private key 无法通过测试."
+        if [[ $is_new_private_key == "$is_new_public_key" ]]; then
+            err "Private key 和 Public key 不能一样."
+            return 1
         fi
-        sed -i s#$is_new_private_key #$is_new_public_key# $is_tmp_json
-        $is_core_bin check -c $is_tmp_json &> /dev/null
-        if [[ $? != 0 ]]; then
-            is_key_err=1
-            is_key_err_msg+="Public key 无法通过测试."
+        if [[ ! $is_new_private_key =~ ^[A-Za-z0-9_-]{43}=?$ ||
+            ! $is_new_public_key =~ ^[A-Za-z0-9_-]{43}=?$ ]]; then
+            err "Reality 密钥必须为编码后的 32 字节密钥"
+            return 1
         fi
-        rm $is_tmp_json
-        if [[ $is_key_err ]]; then err $is_key_err_msg; fi
+        local candidate
+        candidate=$(jq --arg private "$is_new_private_key" --arg public "$is_new_public_key" '
+            .inbounds[0].tls.reality.private_key = $private
+            | .outbounds = ([.outbounds[]? | select(((.tag // "") | startswith("public_key_")) | not)]
+                + [{tag:("public_key_" + $public),type:"direct"}])
+        ' "$is_conf_dir/$is_config_file") || return 1
+        snapshot_ensure "write-reality-key" || return 1
+        node_commit_config node "$candidate" "$is_config_file" "$is_config_file" || return 1
         is_private_key=$is_new_private_key
         is_public_key=$is_new_public_key
         is_test_json=
-        add $net
+        manage restart &
+        info "$is_config_file"
     fi
 }
 

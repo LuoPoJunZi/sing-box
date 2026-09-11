@@ -85,10 +85,10 @@ write_add() {
         if [[ ! $door_port ]]; then ask string door_port "请输入目标端口"; fi
     fi
 
-    if [[ $(grep 2022 <<< $ss_method) ]]; then
+    if [[ $ss_method == *2022* && ! ${is_dry_run:-} && ! ${is_gen:-} ]]; then
         if [[ $ss_password ]]; then
             is_test_json=1
-            create server Shadowsocks
+            create server Shadowsocks || return 1
             if [[ ! $tmp_uuid ]]; then get_uuid; fi
             is_test_json_save=$is_conf_dir/tmp-test-$tmp_uuid
             cat <<< "$is_new_json" > $is_test_json_save
@@ -104,7 +104,7 @@ write_add() {
     fi
 
     write_add_prompt_remark "$@"
-    write_add_install_caddy_if_needed "$@"
-    create server $is_new_protocol
+    create server "$is_new_protocol" || return 1
+    [[ ${is_dry_run:-} || ${is_gen:-} ]] && return 0
     info
 }

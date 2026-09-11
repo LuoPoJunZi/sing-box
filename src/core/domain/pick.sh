@@ -6,6 +6,7 @@ domain_recent_contains() {
 }
 
 domain_mark_recent() {
+    [[ ${is_dry_run:-} || ${is_gen:-} || ${is_test_json:-} ]] && return 0
     local d="$1" now
     now="$(date +%s)"
     echo "$now|$d" >> "$domain_recent_file"

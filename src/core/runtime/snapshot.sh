@@ -47,29 +47,29 @@ runtime_snapshot_ensure() {
     fi
 
     backup_root="$(runtime_snapshot_dir)"
-    mkdir -p "$backup_root"
+    mkdir -p "$backup_root" || return 1
 
     snapshot_id="$(date +%Y%m%d-%H%M%S)-${reason}"
     snapshot_dir="$backup_root/$snapshot_id"
-    mkdir -p "$snapshot_dir"
+    mkdir -p "$snapshot_dir" || return 1
 
     if [[ -f $is_config_json ]]; then
-        cp -f -- "$is_config_json" "$snapshot_dir/config.json"
+        cp -f -- "$is_config_json" "$snapshot_dir/config.json" || return 1
     fi
     if [[ -d $is_conf_dir && $is_conf_dir != '/' ]]; then
-        mkdir -p "$snapshot_dir/conf"
-        cp -rf -- "$is_conf_dir/." "$snapshot_dir/conf/"
+        mkdir -p "$snapshot_dir/conf" || return 1
+        cp -rf -- "$is_conf_dir/." "$snapshot_dir/conf/" || return 1
     elif [[ -d $is_conf_dir ]]; then
         warn "跳过不安全的节点目录快照: $is_conf_dir"
     fi
     if [[ $is_caddy && -d $is_caddy_conf && $is_caddy_dir && $is_caddy_conf == "$is_caddy_dir/"* && $is_caddy_conf != "$is_caddy_dir/" ]]; then
-        mkdir -p "$snapshot_dir/caddy-conf"
-        cp -rf -- "$is_caddy_conf/." "$snapshot_dir/caddy-conf/"
+        mkdir -p "$snapshot_dir/caddy-conf" || return 1
+        cp -rf -- "$is_caddy_conf/." "$snapshot_dir/caddy-conf/" || return 1
     elif [[ $is_caddy && -d $is_caddy_conf ]]; then
         warn "跳过不安全的 Caddy 目录快照: $is_caddy_conf"
     fi
 
-    cat > "$snapshot_dir/meta.txt" << EOF
+    cat > "$snapshot_dir/meta.txt" << EOF || return 1
 created_at=$(date '+%F %T %z')
 reason=$reason
 core_version=$is_core_ver

@@ -42,7 +42,7 @@ write_create() {
                 return
             fi
 
-            snapshot_ensure "write-create"
+            snapshot_ensure "write-create" || return 1
             if [[ $is_dry_run ]]; then
                 msg "DRY-RUN: 将创建配置文件 -> $is_json_file"
                 msg "DRY-RUN: 协议=$is_new_protocol 端口=$port 备注=$safe_remark"
@@ -60,23 +60,25 @@ write_create() {
                     ;;
             esac
 
-            if [[ $is_config_file ]]; then
-                is_no_del_msg=1
-                del $is_config_file
+            local previous_name=${is_config_file:-} previous_port=""
+            if [[ $previous_name == *CFtunnel* ]]; then
+                previous_port=$(jq -r '.inbounds[0].listen_port' "$is_conf_dir/$previous_name") || return 1
+                previous_port=${previous_port%$'\r'}
             fi
-
-            printf '%s\n' "$is_new_json" > "$is_json_file" || return 1
+            if [[ $is_new_install && ! -f $is_config_json ]]; then
+                create config.json defer-restart || return 1
+            fi
+            node_commit_config node "$is_new_json" "$is_config_name" "$previous_name" || return 1
+            write_cleanup_replaced_node "$previous_name" "$previous_port"
+            write_add_install_caddy_if_needed || return 1
 
             if [[ $is_new_protocol == 'CFtunnel' && $cf_token ]]; then
                 install_cloudflared
                 create_cftunnel_service "$cf_token" "$port"
             fi
 
-            if [[ $is_new_install ]]; then
-                create config.json
-            fi
             if [[ $is_caddy && $host && ! $is_no_auto_tls ]]; then
-                create caddy $net
+                create caddy "$net" || return 1
             fi
             manage restart &
             ;;
@@ -93,6 +95,10 @@ write_create() {
             msg
             ;;
         caddy)
+            if [[ ${is_dry_run:-} ]]; then
+                msg "DRY-RUN: 将更新 Caddy 配置并重启，本次不执行"
+                return 0
+            fi
             load caddy.sh
             if [[ $is_install_caddy ]]; then
                 caddy_config new
@@ -107,22 +113,14 @@ write_create() {
             manage restart caddy &
             ;;
         config.json)
-            is_log='log:{output:"/var/log/'$is_core'/access.log",level:"info","timestamp":true}'
-            is_dns='dns:{}'
-            is_ntp='ntp:{"enabled":true,"server":"time.apple.com"},'
-            if [[ -f $is_config_json ]]; then
-                if [[ $(jq .ntp.enabled $is_config_json) != "true" ]]; then
-                    is_ntp=
-                fi
-            else
-                if [[ ! $is_ntp_on ]]; then
-                    is_ntp=
-                fi
+            if [[ ${is_dry_run:-} ]]; then
+                msg "DRY-RUN: 将校验并重建主配置 -> $is_config_json，本次不写入或重启"
+                return 0
             fi
-            is_outbounds='outbounds:[{tag:"direct",type:"direct"}]'
-            is_server_config_json=$(jq "{$is_log,$is_dns,$is_ntp$is_outbounds}" <<< {})
-            cat <<< $is_server_config_json > $is_config_json
-            manage restart &
+            is_server_config_json=$(node_build_main_config) || return 1
+            snapshot_ensure "write-main-config" || return 1
+            node_commit_config main "$is_server_config_json" || return 1
+            if [[ ${2:-} != defer-restart ]]; then manage restart & fi
             ;;
     esac
 }

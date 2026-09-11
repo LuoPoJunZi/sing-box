@@ -1,6 +1,7 @@
 #!/bin/bash
 
 domain_cache_write() {
+    [[ ${is_dry_run:-} || ${is_gen:-} || ${is_test_json:-} ]] && return 0
     local d="$1" ok="$2"
     local now
     now="$(date +%s)"

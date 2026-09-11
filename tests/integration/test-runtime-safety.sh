@@ -52,4 +52,15 @@ if runtime_snapshot_restore '../outside' > /dev/null 2>&1; then
     exit 1
 fi
 
+is_snapshot_id=
+printf '{}\n' > "$is_config_json"
+cp() { return 1; }
+if runtime_snapshot_ensure copy-failure; then
+    echo "[runtime-safety] ignored snapshot copy failure"
+    exit 1
+fi
+unset -f cp
+[[ ! $is_snapshot_id ]]
+[[ $(cat "$is_config_json") == '{}' ]]
+
 echo "[runtime-safety] ok"

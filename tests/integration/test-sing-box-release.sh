@@ -90,9 +90,10 @@ err() { fail "$@"; }
 for protocol in "${protocol_list[@]}" Direct; do
     (
         set +u # Production modules intentionally use optional, unset context fields.
-        fixture_node_context "$protocol"
-        write_create server "$protocol"
-        printf '%s\n' "$is_new_json" > "$conf_dir/$protocol.json"
+        fixture_node_context "$protocol" || exit 1
+        write_create server "$protocol" || exit 1
+        jq -e '.inbounds | length == 1' <<< "$is_new_json" > /dev/null || exit 1
+        printf '%s\n' "$is_new_json" > "$conf_dir/$protocol.json" || exit 1
     ) || fail "production generation failed: $protocol"
 done
 
@@ -135,4 +136,23 @@ for node_file in "$conf_dir"/*.json; do
     }
 done
 
+# Validate the complete staged config set using the real core (no services).
+. src/core/node/transaction.sh
+(
+    set +u
+    is_conf_dir="$tmp_dir/transaction-conf"
+    is_config_json="$tmp_dir/transaction-main.json"
+    is_core_bin="$core_binary"
+    mkdir "$is_conf_dir"
+    cp "$modern_config" "$is_config_json"
+    node_commit_config node "$(cat "$conf_dir/Socks.json")" old.json
+    node_commit_config node "$(cat "$conf_dir/Socks.json")" new.json old.json
+    [[ ! -e "$is_conf_dir/old.json" && -f "$is_conf_dir/new.json" ]]
+    before=$(sha256sum "$is_conf_dir/new.json")
+    if node_commit_config node '{"inbounds":[{"type":"invalid-protocol"}]}' new.json new.json; then
+        fail "transaction accepted invalid core config"
+    fi
+    [[ $(sha256sum "$is_conf_dir/new.json") == "$before" ]]
+    node_commit_config main "$(cat "$modern_config")"
+)
 echo "[sing-box-release] ok: $compat_tag"

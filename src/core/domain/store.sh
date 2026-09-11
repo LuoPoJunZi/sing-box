@@ -6,6 +6,8 @@ domain_init_store() {
     domain_health_file="$is_sh_dir/domain_health.cache"
     domain_recent_file="$is_sh_dir/domain_recent.list"
 
+    [[ ${is_dry_run:-} || ${is_gen:-} || ${is_test_json:-} ]] && return 0
+
     mkdir -p "$is_sh_dir"
     [[ -f $domain_custom_file ]] || : > "$domain_custom_file"
     [[ -f $domain_disabled_file ]] || : > "$domain_disabled_file"

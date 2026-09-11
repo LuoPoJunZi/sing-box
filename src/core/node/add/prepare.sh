@@ -14,9 +14,13 @@ write_add_prompt_remark() {
 
 write_add_install_caddy_if_needed() {
     if [[ $is_install_caddy ]]; then
+        if [[ ${is_dry_run:-} || ${is_gen:-} || ${is_test_json:-} ]]; then
+            msg "DRY-RUN: 将安装 Caddy，本次不下载或创建服务"
+            return 0
+        fi
         _green "\n安装 Caddy 实现自动配置 TLS.\n"
-        download caddy
-        install_service caddy &> /dev/null
+        download caddy || return 1
+        install_service caddy &> /dev/null || return 1
         is_caddy=1
         _green "安装 Caddy 成功.\n"
     fi

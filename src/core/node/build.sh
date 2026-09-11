@@ -1,6 +1,24 @@
 #!/bin/bash
 
 # Pure serialization: all dynamic strings are jq arguments, never jq source.
+# Build the main defaults without evaluating dynamic data as jq source.
+node_build_main_config() {
+    local ntp=false
+    if [[ -f $is_config_json ]]; then
+        if ! ntp=$(jq -r '(.ntp.enabled // false) == true' "$is_config_json" 2> /dev/null); then
+            warn "原主配置无法解析，将使用默认值重建；原文件仍会先备份" >&2
+            ntp=false
+        fi
+        ntp=${ntp%$'\r'}
+    elif [[ ${is_ntp_on:-} ]]; then
+        ntp=true
+    fi
+    MSYS2_ARG_CONV_EXCL='*' jq -n --arg log "/var/log/$is_core/access.log" --argjson ntp "$ntp" '
+        {log:{output:$log,level:"info",timestamp:true},dns:{},outbounds:[{tag:"direct",type:"direct"}]}
+        + (if $ntp then {ntp:{enabled:true,server:"time.apple.com"}} else {} end)
+    '
+}
+
 # Consumes the normalized write context; prints JSON and does not touch the system.
 node_build_config() {
     MSYS2_ARG_CONV_EXCL='*' jq -n \

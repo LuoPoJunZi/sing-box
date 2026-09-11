@@ -22,15 +22,15 @@ trap 'rm -rf -- "$tmp_dir"' EXIT
 
 for protocol in "${protocol_list[@]}" Direct; do
     (
-        fixture_node_context "$protocol"
-        write_create server "$protocol"
-        jq -e '.inbounds | length == 1' <<< "$is_new_json" > /dev/null
-        printf '%s\n' "$is_new_json" > "$tmp_dir/node.json"
+        fixture_node_context "$protocol" || exit 1
+        write_create server "$protocol" || exit 1
+        jq -e '.inbounds | length == 1' <<< "$is_new_json" > /dev/null || exit 1
+        printf '%s\n' "$is_new_json" > "$tmp_dir/node.json" || exit 1
         expected_password=$password
         expected_path=${path:-}
         expected_net=$net
-        query_read_node "$tmp_dir/node.json"
-        query_protocol_metadata
+        query_read_node "$tmp_dir/node.json" || exit 1
+        query_protocol_metadata || exit 1
         [[ $net == "$expected_net" ]] || {
             echo "network changed: $protocol $net/$expected_net"
             exit 1
@@ -40,7 +40,7 @@ for protocol in "${protocol_list[@]}" Direct; do
             exit 1
         }
         case $is_protocol in
-            trojan | tuic | hysteria2) [[ $password == "$expected_password" ]] ;;
+            trojan | tuic | hysteria2) [[ $password == "$expected_password" ]] || exit 1 ;;
         esac
     ) || {
         echo "[node-config] failed: $protocol"

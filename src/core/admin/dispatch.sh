@@ -14,6 +14,16 @@ admin_main() {
 }
 
 admin_dispatch_command() {
+    # Commands without a reviewed preview path must never fall through to writes.
+    if [[ ${is_dry_run:-} ]]; then
+        case $1 in
+            a | add | gen | no-auto-tls | c | config | change | d | del | rm | dd | ddel | fix | fix-all | fix-config.json | fix-caddyfile | backup | rollback | restore | un | uninstall | u | up | update | U | update.sh | start | stop | r | restart | t | test | reinstall | i | info | url | qr | all | doctor | diag | manifest | mf | s | status | ip | v | ver | version | h | help | --help | about | get-port) ;;
+            *)
+                msg "DRY-RUN: 此命令暂不支持详细预演 ($1)，未执行任何操作"
+                return 0
+                ;;
+        esac
+    fi
     case $1 in
         a | add | gen | no-auto-tls)
             if [[ $1 == 'gen' ]]; then is_gen=1; fi

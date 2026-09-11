@@ -26,7 +26,7 @@ get_port() {
         fi
     done
 
-    if [[ $tmp_port ]]; then
+    if [[ $tmp_port && ! ${is_dry_run:-} && ! ${is_gen:-} && ! ${is_test_json:-} ]]; then
         firewall_allow "$tmp_port"
     fi
 }

@@ -63,7 +63,7 @@ write_change() {
         is_change_id=${is_can_change[$REPLY - 1]}
     fi
 
-    snapshot_ensure "write-change"
+    snapshot_ensure "write-change" || return 1
 
     case $is_change_id in
         full) add "$net" "${@:3}" ;;

@@ -1,6 +1,10 @@
 #!/bin/bash
 
 caddy_config() {
+    if [[ ${is_dry_run:-} ]]; then
+        msg "DRY-RUN: 将生成 Caddy 配置 ($1)，本次不写入文件"
+        return 0
+    fi
     is_caddy_site_file=$is_caddy_conf/${host}.conf
     case $1 in
         new)
