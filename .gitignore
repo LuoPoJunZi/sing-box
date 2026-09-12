@@ -1,3 +1,53 @@
-AGENTS.md
-LOCAL_WORK_MEMORY.md
-tests/e2e/loopback-proxy.py
+# Local project memory and environment-specific reports
+/AGENTS.md
+/LOCAL_WORK_MEMORY.md
+/LOCAL_SING_BOX_BLOG.md
+/docs/TEST_REPORT_*.md
+
+# Private/local test helpers
+/tests/e2e/loopback-proxy.py
+
+# Secrets and locally generated certificates
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.cer
+*.csr
+*.p12
+*.pfx
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*.stackdump
+*~
+
+# Caches, logs, temporary files, and build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.coverage
+coverage/
+htmlcov/
+.cache/
+tmp/
+dist/
+build/
+out/
+*.log
+*.pid
+*.tmp
+*.bak
+*.tar
+*.tar.gz
+*.zip

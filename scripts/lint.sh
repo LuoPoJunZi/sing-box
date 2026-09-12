@@ -9,6 +9,7 @@ bash scripts/check-shell.sh
 echo "[lint] shfmt"
 shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts tests
 bash scripts/check-structure.sh
+bash scripts/check-repo-hygiene.sh
 bash scripts/check-share-links.sh
 bash scripts/check-release.sh
 bash scripts/test.sh

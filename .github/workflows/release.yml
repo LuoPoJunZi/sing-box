@@ -102,10 +102,13 @@ jobs:
 
       - name: Package Code
         if: env.should_release == 'true'
-        # 将压缩包先生成在上一层目录，彻底避开“文件正在变化”的冲突，然后再移回来
+        # 只打包当前提交中明确允许的已跟踪路径，避免本地文件或生成物进入发布资产。
         run: |
-          tar --exclude='tests/e2e/loopback-proxy.py' -zcf ../code.tar.gz install.sh sing-box.sh src scripts tests LICENSE README.md README.en.md CONTRIBUTING.md RELEASE_NOTES.md docs
-          mv ../code.tar.gz ./
+          git archive \
+            --format=tar.gz \
+            --output=code.tar.gz \
+            "$GITHUB_SHA" \
+            -- install.sh sing-box.sh src scripts tests LICENSE README.md README.en.md CONTRIBUTING.md RELEASE_NOTES.md docs
 
       - name: Create Release
         if: env.should_release == 'true'

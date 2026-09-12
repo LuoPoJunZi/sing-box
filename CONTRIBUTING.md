@@ -75,6 +75,13 @@ CI now runs:
 Please run equivalent checks locally before opening a PR.
 When preparing a public release, run `RELEASE_CHECK_STRICT_TAG=1 bash scripts/check-release.sh` if you want the check to fail when the tag already exists locally.
 
+## Repository Hygiene
+
+- Keep local memory, environment-specific reports, credentials, certificates, caches, logs, and generated archives out of Git.
+- `AGENTS.md`, `LOCAL_WORK_MEMORY.md`, `LOCAL_SING_BOX_BLOG.md`, `docs/TEST_REPORT_*.md`, and `tests/e2e/loopback-proxy.py` are local-only.
+- Run `bash scripts/check-repo-hygiene.sh` before committing; the same check runs in CI.
+- Release archives are generated from tracked files in the target commit, so ignored and untracked workspace files are never packaged.
+
 Local helper:
 
 - `bash scripts/check-shell.sh`

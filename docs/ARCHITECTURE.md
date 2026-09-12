@@ -92,10 +92,10 @@ BENCH_NODES=20 bash scripts/benchmark-doctor.sh
 
 Auto Release 先调用同一提交的可复用 Shell Lint workflow，全部检查成功后才允许发布。
 PR 和手动检查只有只读权限；写权限只授予主分支发布任务。
-发布包使用明确的文件/目录清单，不打包本地记忆和临时工具。
+发布包只从当前 Git 提交中选取明确的文件/目录清单，不读取工作目录中的未跟踪或忽略文件。
 实现依据：[GitHub 可复用工作流文档](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)。
 
 本地检查不能替代 Linux systemd、实际端口监听、真实安装/卸载和外部客户端导入验证。
 发布前仍应执行 VPS 回归清单；提交代码不等于发布新版本。
 
-2026-09-11 已完成真实 Linux VPS 上的非特权隔离测试，详细范围、摘要及剩余项目见 [隔离验证记录](TEST_REPORT_2026-09-11.md)。全系统事务化与宿主机破坏性端到端测试仍未完成。
+2026-09-11 已完成真实 Linux VPS 上的非特权隔离测试；详细环境记录仅在本地保留。全系统事务化与宿主机破坏性端到端测试仍未完成。
