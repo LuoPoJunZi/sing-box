@@ -26,6 +26,14 @@ fail() {
     exit 1
 }
 
+msg() { printf '%s\n' "$*"; }
+warn() { printf '%s\n' "$*"; }
+ui_style() { printf '%s' "$2"; }
+ui_key() { printf '%s' "$*"; }
+ui_success() { printf '%s' "$*"; }
+ui_warn() { printf '%s' "$*"; }
+footer_msg() { :; }
+
 reset_case() {
     unset host path uuid password ss_method ss_password is_socks_user is_socks_pass
     unset is_short_id is_servername is_public_key net_type is_new_protocol
@@ -46,6 +54,8 @@ query_info
 [[ $is_url == hysteria2://p%40ss%20word@203.0.113.10:443/\?* ]] || fail "Hysteria2 URI prefix mismatch"
 [[ $is_url == *'pinSHA256='*'&insecure=1'* || $is_url == *'insecure=1&pinSHA256='* ]] || fail "Hysteria2 pin missing"
 [[ $is_url == *'#%E6%B5%8B%E8%AF%95%20%E8%8A%82%E7%82%B9%231' ]] || fail "Hysteria2 remark encoding failed"
+hysteria2_snippet=$(query_tls_pin_print_snippet hysteria2 "$is_addr")
+[[ $hysteria2_snippet == *'pinSHA256'*'certificate_public_key_sha256'*'"insecure": false'* ]] || fail "Hysteria2 sing-box SPKI guidance missing"
 
 reset_case
 is_protocol=trojan
@@ -55,6 +65,8 @@ query_info
 [[ $is_url == *'pcs='* ]] || fail "Trojan pcs missing"
 [[ $is_url != *'insecure='* && $is_url != *'allowInsecure='* ]] || fail "Trojan still exports deprecated insecure fields"
 [[ ${is_info_str[3]} == 'p@ss word' && ${#is_info_str[@]} -eq 7 ]] || fail "Trojan info fields split on whitespace"
+trojan_snippet=$(query_tls_pin_print_snippet trojan-self-signed "$is_addr")
+[[ $trojan_snippet == *'pinnedPeerCertSha256'*'certificate_public_key_sha256'*'"insecure": false'* ]] || fail "Trojan sing-box SPKI guidance missing"
 
 reset_case
 is_protocol=tuic
@@ -65,6 +77,8 @@ query_info
 [[ $is_url == tuic://11111111-1111-1111-1111-111111111111%3Ap%40ss%3Aword@* ]] || fail "TUIC userinfo encoding failed"
 [[ $is_url == *'insecure=1&pcs='*'&congestion_control=bbr'* ]] || fail "TUIC compatibility fields, pin, or congestion control missing"
 [[ $is_url != *'allow_insecure='* && $is_url != *'allowInsecure='* ]] || fail "TUIC exports redundant allowInsecure aliases"
+tuic_snippet=$(query_tls_pin_print_snippet tuic "$is_addr")
+[[ $tuic_snippet == *'certificate_public_key_sha256'*'"insecure": false'* ]] || fail "TUIC sing-box SPKI guidance missing"
 
 reset_case
 is_protocol=vless
@@ -127,6 +141,8 @@ is_addr='[2001:db8::1]'
 query_info
 vmess_json=$(printf '%s' "${is_url#vmess://}" | base64 -d)
 jq -e '.add == "2001:db8::1" and .tls == "tls" and .sni == "2001:db8::1" and (has("insecure") | not) and (.pcs | test("^[0-9a-f]{64}$"))' <<< "$vmess_json" > /dev/null || fail "VMess-QUIC address or TLS pin fields missing"
+vmess_snippet=$(query_tls_pin_print_snippet vmess-quic "2001:db8::1")
+[[ $vmess_snippet == *'pinnedPeerCertSha256'*'certificate_public_key_sha256'*'"insecure": false'* ]] || fail "VMess-QUIC sing-box SPKI guidance missing"
 
 reset_case
 is_protocol=trojan
@@ -136,10 +152,6 @@ is_tls_cer="$tmp_dir/missing.cer"
 query_info
 [[ -z $is_url && $is_url_error == *'无法安全生成分享链接'* ]] || fail "missing pin must fail closed"
 
-msg() { printf '%s\n' "$*"; }
-warn() { printf '%s\n' "$*"; }
-ui_style() { printf '%s' "$2"; }
-footer_msg() { :; }
 is_dont_show_info=
 output=$(query_info 2>&1)
 [[ $output == *'无法安全生成分享链接'* ]] || fail "sb info must explain missing pin"

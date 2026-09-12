@@ -67,6 +67,26 @@ query_tls_pin_print_header() {
     msg "重新生成服务器证书后指纹会变化，请重新导入节点。"
 }
 
+query_tls_pin_print_sing_box_snippet() {
+    local profile_label=$1 server_name=$2 alpn=${3:-}
+
+    if [[ $tls_pin_pubkey_error ]]; then
+        warn "$tls_pin_pubkey_error"
+        return
+    fi
+    query_tls_pin_print_value "sing-box certificate_public_key_sha256" "$tls_pin_pubkey_sha256_b64"
+    msg "$profile_label / sing-box 客户端 TLS 示例:"
+    msg '"tls": {'
+    msg '  "enabled": true,'
+    msg "  \"server_name\": \"$server_name\","
+    msg '  "insecure": false,'
+    if [[ $alpn ]]; then
+        msg "  \"alpn\": [\"$alpn\"],"
+    fi
+    msg "  \"certificate_public_key_sha256\": [\"$tls_pin_pubkey_sha256_b64\"]"
+    msg '}'
+}
+
 query_tls_pin_print_snippet() {
     local profile=$1
     local server_name=${2:-$is_addr}
@@ -89,22 +109,11 @@ query_tls_pin_print_snippet() {
             msg "  insecure: true"
             msg "  pinSHA256: $tls_pin_cert_sha256_hex"
             msg "说明: 自签证书应同时使用 insecure: true 和 pinSHA256；指纹负责锁定证书。"
+            query_tls_pin_print_sing_box_snippet Hysteria2 "$server_name" h3
             ;;
         tuic)
             query_tls_pin_print_value "v2rayN / Xray pcs" "$tls_pin_cert_sha256_hex"
-            if [[ $tls_pin_pubkey_error ]]; then
-                warn "$tls_pin_pubkey_error"
-                return
-            fi
-            query_tls_pin_print_value "sing-box certificate_public_key_sha256" "$tls_pin_pubkey_sha256_b64"
-            msg "TUIC / sing-box 客户端 TLS 示例:"
-            msg "\"tls\": {"
-            msg "  \"enabled\": true,"
-            msg "  \"server_name\": \"$server_name\","
-            msg "  \"insecure\": false,"
-            msg "  \"alpn\": [\"h3\"],"
-            msg "  \"certificate_public_key_sha256\": [\"$tls_pin_pubkey_sha256_b64\"]"
-            msg "}"
+            query_tls_pin_print_sing_box_snippet TUIC "$server_name" h3
             ;;
         trojan-self-signed)
             query_tls_pin_print_value "v2rayN / Xray pcs" "$tls_pin_cert_sha256_hex"
@@ -114,6 +123,7 @@ query_tls_pin_print_snippet() {
             msg "  \"pinnedPeerCertSha256\": \"$tls_pin_cert_sha256_hex\""
             msg '}'
             msg "说明: 按项目约定继续使用无域名 / 自签证书；新版 v2rayN 会从 URL 的 pcs 读取固定指纹。"
+            query_tls_pin_print_sing_box_snippet Trojan "$server_name"
             ;;
         vmess-quic)
             query_tls_pin_print_value "v2rayN / Xray pcs" "$tls_pin_cert_sha256_hex"
@@ -123,6 +133,7 @@ query_tls_pin_print_snippet() {
             msg "  \"alpn\": [\"h3\"],"
             msg "  \"pinnedPeerCertSha256\": \"$tls_pin_cert_sha256_hex\""
             msg "}"
+            query_tls_pin_print_sing_box_snippet VMess-QUIC "$server_name" h3
             warn "VMess-QUIC 属于兼容性风险较高的旧方案；新建节点时更推荐 Reality、CFtunnel 或有域名 TLS。"
             ;;
     esac

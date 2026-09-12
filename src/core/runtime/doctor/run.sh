@@ -7,7 +7,7 @@ runtime_doctor() {
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
-    local warn_core_version=0 warn_cloudflared_version=0 warn_sing_box_compat=0
+    local warn_core_version=0 warn_cloudflared_version=0 warn_caddy_security=0 warn_sing_box_compat=0
     local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
@@ -84,6 +84,9 @@ runtime_doctor() {
     msg "------------- 服务与端口 -------------"
     if ! runtime_doctor_cloudflared_version; then
         warn_cloudflared_version=1
+    fi
+    if ! runtime_doctor_caddy_security; then
+        warn_caddy_security=1
     fi
     if [[ $fail_systemd -eq 0 ]]; then
         if systemctl list-unit-files "$is_core.service" 2> /dev/null | grep -q "^$is_core.service"; then
@@ -208,6 +211,9 @@ runtime_doctor() {
         fi
         if [[ $warn_cloudflared_version -eq 1 ]]; then
             msg "13) cloudflared 版本异常：执行 sb update cloudflared，禁止继续使用 2026.8.0/2026.8.1"
+        fi
+        if [[ $warn_caddy_security -eq 1 ]]; then
+            msg "14) Caddy 风险：检查上方版本和配置清单；避免 forward_auth/reverse_proxy 风险组合，并关注 2.11.5 正式版"
         fi
         msg "----------------------------------------"
     fi

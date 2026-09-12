@@ -1,5 +1,17 @@
 # Release Notes
 
+## 未发布
+
+### 主要变化
+
+- `sb doctor` 增加 Caddy 稳定版本基线和 `forward_auth`/`reverse_proxy` 风险组合扫描，不修改现有 Caddy 配置或服务。
+- sing-box 1.14 兼容扫描补齐远程规则集 `download_detour` 和隐式默认 HTTP 客户端提示，为 1.16 移除旧行为提前准备。
+- 更新 v2rayN、Xray-core 与 cloudflared 的上游兼容说明；Hysteria2、TUIC、Trojan 和 VMess-QUIC 均输出 sing-box 客户端手动 SPKI 安全片段。
+
+### 开发与验证
+
+- 本地和 CI 的 shfmt 基线更新至 3.14.1，并增加版本漂移拒绝测试。
+
 ## v26.9.12
 
 ### 主要变化

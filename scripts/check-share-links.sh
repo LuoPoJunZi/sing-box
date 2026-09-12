@@ -37,4 +37,6 @@ if grep -q '"allowInsecure":' src/core/query/tls_pin.sh; then
     fail "deprecated allowInsecure remains in client snippets"
 fi
 
+grep -q 'certificate_public_key_sha256' src/core/query/tls_pin.sh || fail "manual sing-box SPKI guidance missing"
+
 echo "[share-links] ok"

@@ -44,6 +44,73 @@ runtime_doctor_cloudflared_version() {
     runtime_doctor_ok "cloudflared 版本: $version"
 }
 
+runtime_doctor_caddy_file_has_forward_auth_risk() {
+    local config_file=$1
+
+    [[ -f $config_file ]] || return 1
+    grep -Eq '^[[:space:]]*forward_auth([[:space:]]|$)' "$config_file" &&
+        grep -Eq '^[[:space:]]*reverse_proxy([[:space:]]|$)' "$config_file"
+}
+
+runtime_doctor_caddy_security() {
+    local version=${is_caddy_ver:-} recommended config_file detail
+    local issue=0
+    local config_files=() risk_files=()
+
+    [[ ${is_caddy:-} || -x ${is_caddy_bin:-} ]] || return 0
+    if [[ -z $version && -x ${is_caddy_bin:-} ]]; then
+        version=$("$is_caddy_bin" version 2> /dev/null | awk 'NR == 1 {print $1}')
+    fi
+    if [[ -z $version ]]; then
+        runtime_doctor_warn "Caddy 版本: 无法识别"
+        return 1
+    fi
+
+    recommended=$(caddy_recommended_stable_version)
+    if version_is_less_than "$version" "$recommended"; then
+        runtime_doctor_warn "Caddy 版本: $version，低于已复核稳定基线 $recommended"
+        issue=1
+    else
+        runtime_doctor_ok "Caddy 版本: $version，已达到稳定基线 $recommended"
+    fi
+
+    if ! caddy_version_has_forward_auth_risk "$version"; then
+        return "$issue"
+    fi
+
+    if [[ -n ${is_caddyfile:-} && -f $is_caddyfile ]]; then
+        config_files+=("$is_caddyfile")
+    fi
+    if [[ -n ${is_caddy_conf:-} && -d $is_caddy_conf ]]; then
+        while IFS= read -r config_file; do
+            config_files+=("$config_file")
+        done < <(find "$is_caddy_conf" -maxdepth 1 -type f \( -name '*.conf' -o -name '*.conf.add' \) 2> /dev/null | sort)
+    fi
+    if [[ -n ${is_caddy_dir:-} && -d $is_caddy_dir/sites ]]; then
+        while IFS= read -r config_file; do
+            config_files+=("$config_file")
+        done < <(find "$is_caddy_dir/sites" -maxdepth 1 -type f -name '*.conf' 2> /dev/null | sort)
+    fi
+
+    for config_file in "${config_files[@]}"; do
+        if runtime_doctor_caddy_file_has_forward_auth_risk "$config_file"; then
+            risk_files+=("$config_file")
+        fi
+    done
+    if [[ ${#risk_files[@]} -eq 0 ]]; then
+        runtime_doctor_ok "Caddy forward_auth: 未发现与 reverse_proxy 同文件组合"
+        return "$issue"
+    fi
+
+    runtime_doctor_warn "Caddy 安全: 当前 $version 有 ${#risk_files[@]} 个配置可能触发 forward_auth/reverse_proxy 上游错连风险"
+    for config_file in "${risk_files[@]}"; do
+        detail=$(basename "$config_file")
+        msg "  - $detail ($config_file)"
+    done
+    runtime_doctor_info "请先拆分或停用上述组合，并在 Caddy 2.11.5 正式发布后升级；脚本默认生成的配置不使用 forward_auth."
+    return 1
+}
+
 runtime_doctor_compat_issue_label() {
     case $1 in
         legacy_dns_server) printf '%s\n' "旧 DNS server" ;;
@@ -56,6 +123,8 @@ runtime_doctor_compat_issue_label() {
         dns_legacy_address_filter) printf '%s\n' "旧 DNS 地址过滤" ;;
         dns_legacy_strategy) printf '%s\n' "旧 DNS strategy" ;;
         dns_rule_set_accept_empty) printf '%s\n' "rule_set_ip_cidr_accept_empty" ;;
+        legacy_rule_set_download_detour) printf '%s\n' "远程规则集 download_detour" ;;
+        implicit_rule_set_http_client) printf '%s\n' "远程规则集隐式 HTTP 客户端" ;;
         inline_acme) printf '%s\n' "内联 TLS ACME" ;;
         *) printf '%s\n' "$1" ;;
     esac

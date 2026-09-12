@@ -43,9 +43,9 @@ Admin layering rule:
 
 ## Quality Checks
 
-Use ShellCheck **0.11.0** and shfmt **3.8.0** locally. `scripts/tool-versions.sh`
-is the shared ShellCheck version/digest baseline; `scripts/check-shell.sh` refuses
-other versions before scanning files. CI downloads the exact official Linux archive
+Use ShellCheck **0.11.0** and shfmt **3.14.1** locally. `scripts/tool-versions.sh`
+is the shared tool-version baseline; `scripts/check-shell.sh` and
+`scripts/check-shfmt.sh` refuse other versions before scanning files. CI downloads the exact official Linux archive
 and verifies its SHA-256 instead of using the runner's distribution package.
 Install the matching binary from the [official ShellCheck release](https://github.com/koalaman/shellcheck/releases/tag/v0.11.0)
 and put it on `PATH`; no global ShellCheck rules are disabled to work around version drift.
@@ -58,6 +58,7 @@ See [Architecture](docs/ARCHITECTURE.md) for module boundaries and a reproducibl
 CI now runs:
 
 - `scripts/check-shell.sh` (warning-level ShellCheck; sourced modules only exclude cross-file global/source analysis rules)
+- `scripts/check-shfmt.sh` (pinned shfmt formatting check)
 - `tests/integration/test-install-cli.sh`
 - `tests/unit/test-dispatch.sh`
 - `tests/integration/test-runtime-safety.sh`
@@ -85,6 +86,7 @@ When preparing a public release, run `RELEASE_CHECK_STRICT_TAG=1 bash scripts/ch
 Local helper:
 
 - `bash scripts/check-shell.sh`
+- `bash scripts/check-shfmt.sh`
 - `bash scripts/lint.sh`
 - `bash tests/e2e/smoke.sh`
 

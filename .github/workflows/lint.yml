@@ -46,11 +46,10 @@ jobs:
       - name: Setup shfmt
         uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1
         with:
-          shfmt-version: "3.8.0"
+          shfmt-version: "3.14.1"
 
       - name: Check formatting
-        run: |
-          shfmt -d -i 4 -ci -sr install.sh sing-box.sh src scripts tests
+        run: bash scripts/check-shfmt.sh
 
   sing-box-compat:
     name: recommended sing-box config

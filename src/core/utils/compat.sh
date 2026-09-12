@@ -25,6 +25,19 @@ compat_sing_box_issue_report() {
             )] | length)],
             ["dns_legacy_strategy", ([.dns.rules[]? | .. | objects | select(has("strategy"))] | length)],
             ["dns_rule_set_accept_empty", ([.dns.rules[]? | .. | objects | select(has("rule_set_ip_cidr_accept_empty"))] | length)],
+            ["legacy_rule_set_download_detour", ([.route.rule_set[]? | select(
+                type == "object" and (.type? == "remote" or has("url")) and has("download_detour")
+            )] | length)],
+            ["implicit_rule_set_http_client", (if
+                ((.http_clients? | type) != "array" or (.http_clients | length) == 0) and
+                ((.route.default_http_client? // "") == "")
+            then
+                ([.route.rule_set[]? | select(
+                    type == "object" and
+                    (.type? == "remote" or has("url")) and
+                    ((has("http_client") | not) or (.http_client == null) or (.http_client == ""))
+                )] | length)
+            else 0 end)],
             ["inline_acme", ([.. | objects | .tls? | select(type == "object" and has("acme"))] | length)]
         ]
         | .[]

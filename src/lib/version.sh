@@ -37,6 +37,17 @@ sing_box_recommended_min_version() {
     sing_box_minimum_supported_version
 }
 
+caddy_recommended_stable_version() {
+    printf '%s\n' '2.11.4'
+}
+
+caddy_version_has_forward_auth_risk() {
+    local version
+
+    version=$(version_normalize "$1")
+    version_is_at_least "$version" 2.11.0 && version_is_less_than "$version" 2.11.5
+}
+
 version_is_prerelease() {
     local version
 

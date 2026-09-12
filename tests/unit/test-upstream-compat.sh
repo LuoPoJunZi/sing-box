@@ -22,6 +22,7 @@ msg() { :; }
 [[ $(sing_box_minimum_supported_version) == 1.13.19 ]] || fail "minimum supported sing-box version changed unexpectedly"
 [[ $(sing_box_recommended_stable_version) == 1.14.0 ]] || fail "recommended stable sing-box version is not 1.14.0"
 [[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
+[[ $(caddy_recommended_stable_version) == 2.11.4 ]] || fail "recommended Caddy baseline is not 2.11.4"
 version_is_less_than 1.13.18 1.13.19 || fail "older sing-box version was not detected"
 if version_is_less_than 1.13.19 1.13.19; then
     fail "equal sing-box version was treated as older"
@@ -40,6 +41,11 @@ if admin_update_cloudflared_version_allowed 2026.8.1; then
     fail "cloudflared update preflight allowed a blocked version"
 fi
 admin_update_cloudflared_version_allowed 2026.8.2 || fail "cloudflared update preflight rejected a fixed version"
+caddy_version_has_forward_auth_risk v2.11.0 || fail "Caddy 2.11.0 forward_auth risk was not detected"
+caddy_version_has_forward_auth_risk 2.11.4 || fail "Caddy 2.11.4 forward_auth risk was not detected"
+if caddy_version_has_forward_auth_risk 2.10.2 || caddy_version_has_forward_auth_risk 2.11.5; then
+    fail "unaffected Caddy version was marked for the 2.11 forward_auth risk"
+fi
 
 cat > "$tmp_dir/config.json" << 'EOF'
 {
@@ -63,17 +69,38 @@ cat > "$tmp_dir/config.json" << 'EOF'
     ]
   },
   "experimental": {"cache_file": {"enabled": true, "store_rdrc": true}},
+  "route": {
+    "rule_set": [
+      {"type": "remote", "tag": "legacy", "url": "https://example.com/legacy.srs", "download_detour": "direct"},
+      {"type": "remote", "tag": "implicit", "url": "https://example.com/implicit.srs"}
+    ]
+  },
   "inbounds": [{"type": "trojan", "tls": {"enabled": true, "acme": {"domain": ["example.com"]}}}]
 }
 EOF
 
 report=$(compat_sing_box_issue_report "$tmp_dir/config.json")
-for issue in legacy_dns_server legacy_dns_special_server legacy_dns_server_options legacy_dns_fakeip legacy_dns_outbound_rule dns_independent_cache cache_store_rdrc dns_legacy_address_filter dns_legacy_strategy dns_rule_set_accept_empty inline_acme; do
+for issue in legacy_dns_server legacy_dns_special_server legacy_dns_server_options legacy_dns_fakeip legacy_dns_outbound_rule dns_independent_cache cache_store_rdrc dns_legacy_address_filter dns_legacy_strategy dns_rule_set_accept_empty legacy_rule_set_download_detour implicit_rule_set_http_client inline_acme; do
     grep -q "^${issue}" <<< "$report" || fail "compatibility report missed $issue"
 done
 grep -q $'^dns_legacy_address_filter\t2$' <<< "$report" || fail "nested DNS compatibility rule was not detected"
+grep -q $'^implicit_rule_set_http_client\t2$' <<< "$report" || fail "implicit remote rule-set HTTP clients were not counted"
 [[ $(compat_sing_box_114_rule_conflict_count "$tmp_dir/config.json") -gt 0 ]] || fail "1.14 DNS rule conflict was not detected"
 compat_sing_box_114_file_requires_manual_migration "$tmp_dir/config.json" 0 || fail "manual migration requirement was not detected"
+
+cat > "$tmp_dir/explicit-http-client.json" << 'EOF'
+{
+  "http_clients": [{"tag": "direct-http"}],
+  "route": {
+    "rule_set": [
+      {"type": "remote", "tag": "explicit", "url": "https://example.com/explicit.srs"}
+    ]
+  }
+}
+EOF
+if compat_sing_box_issue_report "$tmp_dir/explicit-http-client.json" | grep -q '^implicit_rule_set_http_client'; then
+    fail "explicit top-level HTTP client was reported as implicit"
+fi
 
 mkdir -p "$tmp_dir/conf"
 cat > "$tmp_dir/safe-main.json" << 'EOF'
@@ -124,5 +151,36 @@ if runtime_doctor_sing_box_version; then
     fail "sing-box prerelease passed the stable-version doctor check"
 fi
 grep -q '预发布版' <<< "$doctor_output" || fail "doctor did not warn about a sing-box prerelease"
+
+mkdir -p "$tmp_dir/caddy/sites" "$tmp_dir/caddy/managed"
+cat > "$tmp_dir/caddy/Caddyfile" << 'EOF'
+import sites/*.conf
+EOF
+cat > "$tmp_dir/caddy/sites/risk.conf" << 'EOF'
+example.com {
+    forward_auth localhost:9091
+    reverse_proxy localhost:8080
+}
+EOF
+is_caddy=1
+is_caddy_ver=v2.11.4
+is_caddy_bin="$tmp_dir/missing-caddy"
+is_caddy_dir="$tmp_dir/caddy"
+is_caddyfile="$tmp_dir/caddy/Caddyfile"
+is_caddy_conf="$tmp_dir/caddy/managed"
+doctor_output=""
+msg() { doctor_output+="MSG:$*"$'\n'; }
+if runtime_doctor_caddy_security; then
+    fail "Caddy forward_auth/reverse_proxy risk passed doctor"
+fi
+grep -q 'risk.conf' <<< "$doctor_output" || fail "doctor did not list the risky Caddy config"
+grep -q '2.11.5' <<< "$doctor_output" || fail "doctor did not mention the patched Caddy target"
+
+doctor_output=""
+is_caddy_ver=v2.10.2
+if runtime_doctor_caddy_security; then
+    fail "old Caddy version unexpectedly passed the recommended baseline"
+fi
+grep -q '低于已复核稳定基线 2.11.4' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
 
 echo "[upstream-compat] ok"
