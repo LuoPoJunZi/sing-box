@@ -104,7 +104,7 @@ jobs:
         if: env.should_release == 'true'
         # 将压缩包先生成在上一层目录，彻底避开“文件正在变化”的冲突，然后再移回来
         run: |
-          tar -zcf ../code.tar.gz install.sh sing-box.sh src scripts tests LICENSE README.md README.en.md CONTRIBUTING.md RELEASE_NOTES.md docs
+          tar --exclude='tests/e2e/loopback-proxy.py' -zcf ../code.tar.gz install.sh sing-box.sh src scripts tests LICENSE README.md README.en.md CONTRIBUTING.md RELEASE_NOTES.md docs
           mv ../code.tar.gz ./
 
       - name: Create Release

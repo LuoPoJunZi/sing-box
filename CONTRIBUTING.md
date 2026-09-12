@@ -43,6 +43,13 @@ Admin layering rule:
 
 ## Quality Checks
 
+Use ShellCheck **0.11.0** and shfmt **3.8.0** locally. `scripts/tool-versions.sh`
+is the shared ShellCheck version/digest baseline; `scripts/check-shell.sh` refuses
+other versions before scanning files. CI downloads the exact official Linux archive
+and verifies its SHA-256 instead of using the runner's distribution package.
+Install the matching binary from the [official ShellCheck release](https://github.com/koalaman/shellcheck/releases/tag/v0.11.0)
+and put it on `PATH`; no global ShellCheck rules are disabled to work around version drift.
+
 Start with `bash scripts/lint.sh` for all offline checks. `bash scripts/test.sh` runs only offline tests.
 The real-core test and VPS tests are explicit opt-in commands; ordinary lint never installs services or accesses GitHub.
 New tests should go into `tests/unit/` or `tests/integration/`, with reusable input in `tests/fixtures/`.

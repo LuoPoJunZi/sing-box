@@ -86,7 +86,7 @@ BENCH_NODES=20 bash scripts/benchmark-doctor.sh
 - `tests/integration/`：生产配置生成、分享输出、证书初始化、更新回滚等。
 - `tests/fixtures/`：确定性测试输入，不复制生产生成算法。
 - `tests/e2e/`：真实 VPS 脚本。Reality smoke 会创建/删除节点，只能在测试机执行。
-- `tests/e2e/loopback-proxy.py`：非 root、仅本机回环的真实 SOCKS 转发测试；不安装服务或操作防火墙。需显式提供已校验的核心路径，不能替代公网或安装/卸载验收。
+- 回环 SOCKS 转发曾使用本地私有 Python 工具验证；该工具不随 Git 仓库或发布包分发，验证结果不替代公网或安装/卸载验收。
 - `scripts/test.sh`：离线测试；`scripts/lint.sh`：统一格式、静态检查和离线测试。
 - `tests/integration/test-sing-box-release.sh`：独立运行的真实核心测试，默认联网下载并校验 SHA-256；也可用 `SING_BOX_CORE_BIN` 指定已验证的二进制。
 

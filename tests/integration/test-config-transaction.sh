@@ -14,7 +14,7 @@ mkdir "$is_conf_dir"
 printf '{}\n' > "$is_config_json"
 printf '{"inbounds":[{"tag":"old"}]}\n' > "$is_conf_dir/old node.json"
 printf '{"inbounds":[{"tag":"peer"}]}\n' > "$is_conf_dir/peer.json"
-cp "$is_conf_dir/old node.json" "$tmp_dir/original"
+command cp "$is_conf_dir/old node.json" "$tmp_dir/original"
 msg() { :; }
 warn() { :; }
 err() { return 1; }
