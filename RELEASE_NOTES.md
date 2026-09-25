@@ -1,12 +1,16 @@
 # Release Notes
 
-## 未发布
+## v26.9.25
 
 ### 主要变化
 
+- 修复新安装时错误剥离发布包首层路径的问题；安装器会先在临时目录识别并校验根目录或单层目录格式，再写入系统路径，避免悬空命令链接和模块缺失。
+- 脚本在线更新同步校验并兼容根目录与单层目录两种发布包结构；正式发布包继续保持现有根目录格式，兼容已安装版本。
+- sing-box 推荐稳定版与真实核心测试基线更新至 `1.14.2`，仍不会自动跟随 `1.15` alpha。
 - `sb doctor` 增加 Caddy 稳定版本基线和 `forward_auth`/`reverse_proxy` 风险组合扫描，不修改现有 Caddy 配置或服务。
+- `sb doctor` 增加 cloudflared 受管隧道自动重启次数和最近 24 小时日志检查，可识别 Docker bridge/QUIC 崩溃及未回退 HTTP/2 的已知特征。
 - sing-box 1.14 兼容扫描补齐远程规则集 `download_detour` 和隐式默认 HTTP 客户端提示，为 1.16 移除旧行为提前准备。
-- 更新 v2rayN、Xray-core 与 cloudflared 的上游兼容说明；Hysteria2、TUIC、Trojan 和 VMess-QUIC 均输出 sing-box 客户端手动 SPKI 安全片段。
+- 上游兼容说明更新至 v2rayN `7.25.2`、Xray-core `v26.9.9` 和 cloudflared `2026.9.3`；Hysteria2、TUIC、Trojan 和 VMess-QUIC 均输出 sing-box 客户端手动 SPKI 安全片段。
 
 ### 开发与验证
 

@@ -44,6 +44,43 @@ runtime_doctor_cloudflared_version() {
     runtime_doctor_ok "cloudflared 版本: $version"
 }
 
+runtime_doctor_cloudflared_runtime() {
+    local unit restarts logs
+    local unit_count=0 issue=0
+
+    command -v cloudflared > /dev/null 2>&1 || return 0
+    command -v systemctl > /dev/null 2>&1 || return 0
+
+    while IFS= read -r unit; do
+        [[ $unit =~ ^cftunnel-[0-9]+\.service$ ]] || continue
+        ((unit_count += 1))
+
+        restarts=$(systemctl show "$unit" --property=NRestarts --value 2> /dev/null || true)
+        if [[ $restarts =~ ^[0-9]+$ ]] && ((restarts >= 3)); then
+            runtime_doctor_warn "cloudflared 隧道: $unit 已自动重启 $restarts 次"
+            issue=1
+        fi
+
+        command -v journalctl > /dev/null 2>&1 || continue
+        logs=$(journalctl --unit "$unit" --since "24 hours ago" --no-pager --lines=200 2> /dev/null || true)
+        if grep -Eqi 'QueueProbePacket|segmentation violation|SIGSEGV' <<< "$logs"; then
+            runtime_doctor_warn "cloudflared 隧道: $unit 最近日志包含 Docker bridge/QUIC 崩溃特征"
+            runtime_doctor_info "若该隧道运行在 Docker bridge 中，可先回退到 2026.8.2 或迁移到宿主机 systemd；请勿在业务高峰直接重启."
+            issue=1
+        fi
+        if grep -Eqi 'CRYPTO_ERROR.*no application protocol|no application protocol.*CRYPTO_ERROR' <<< "$logs"; then
+            runtime_doctor_warn "cloudflared 隧道: $unit 最近日志包含 QUIC 握手拒绝且未回退 HTTP/2 的特征"
+            runtime_doctor_info "请先确认 UDP/QUIC 网络；需要规避时可在维护窗口显式使用 --protocol http2."
+            issue=1
+        fi
+    done < <(systemctl list-unit-files --type=service --no-legend --no-pager 'cftunnel-*.service' 2> /dev/null | awk '{print $1}' | sort -u)
+
+    if [[ $unit_count -gt 0 && $issue -eq 0 ]]; then
+        runtime_doctor_ok "cloudflared 隧道: $unit_count 个受管服务未发现频繁重启或已知 QUIC 错误特征"
+    fi
+    return "$issue"
+}
+
 runtime_doctor_caddy_file_has_forward_auth_risk() {
     local config_file=$1
 

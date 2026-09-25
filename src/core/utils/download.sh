@@ -47,6 +47,34 @@ download_tar_paths_safe() {
     done < <(tar tzf "$archive")
 }
 
+download_script_tree_valid() {
+    local root=$1 required
+    local required_files=(install.sh sing-box.sh src/init.sh src/utils.sh src/core.sh)
+
+    [[ -d $root ]] || return 1
+    for required in "${required_files[@]}"; do
+        [[ -f $root/$required && ! -L $root/$required ]] || return 1
+    done
+}
+
+download_script_tree_root() {
+    local extracted_root=$1 entry candidate="" count=0
+
+    if download_script_tree_valid "$extracted_root"; then
+        printf '%s\n' "$extracted_root"
+        return
+    fi
+    while IFS= read -r -d '' entry; do
+        candidate=$entry
+        ((count += 1))
+    done < <(find "$extracted_root" -mindepth 1 -maxdepth 1 -print0 2> /dev/null)
+    if [[ $count -eq 1 && -d $candidate ]] && download_script_tree_valid "$candidate"; then
+        printf '%s\n' "$candidate"
+        return
+    fi
+    return 1
+}
+
 download_stage_cleanup() {
     if [[ ${download_stage_dir:-} && -d $download_stage_dir ]]; then
         rm -rf -- "$download_stage_dir"
@@ -56,7 +84,7 @@ download_stage_cleanup() {
 
 download_stage_component() {
     local component=$1 version=${2:-} stage_parent=${3:-$is_core_dir}
-    local repo="" asset="" archive="" name=""
+    local repo="" asset="" archive="" name="" script_root=""
 
     download_stage_cleanup
     if [[ ! $version ]]; then
@@ -119,10 +147,11 @@ download_stage_component() {
                 download_stage_cleanup
                 err "$name 发布包无法解压."
             fi
-            [[ -f $download_stage_root/sing-box.sh && -f $download_stage_root/src/init.sh ]] || {
+            script_root=$(download_script_tree_root "$download_stage_root") || {
                 download_stage_cleanup
                 err "$name 发布包结构无效."
             }
+            download_stage_root=$script_root
             ;;
         caddy)
             if ! download_tar_paths_safe "$archive" || ! tar zxf "$archive" -C "$download_stage_root"; then
@@ -144,6 +173,7 @@ download_stage_component() {
 
 download() {
     latest_ver=$2
+    local script_extract="" script_root=""
     [[ ! $latest_ver ]] && get_latest_version "$1"
     github_release_tag_is_safe "$latest_ver" || err "Release 版本号包含不安全字符: $latest_ver"
     tmpdir=$(mktemp -d 2> /dev/null || mktemp -d -t 'tmp-XXXXXX')
@@ -166,7 +196,12 @@ download() {
             asset=code.tar.gz
             download_file
             download_tar_paths_safe "$tmpfile" || err "$name 发布包包含不安全路径."
-            tar zxf "$tmpfile" -C "$is_sh_dir" || err "$name 发布包解压失败."
+            script_extract="$tmpdir/script"
+            mkdir -p "$script_extract"
+            tar zxf "$tmpfile" -C "$script_extract" || err "$name 发布包解压失败."
+            script_root=$(download_script_tree_root "$script_extract") || err "$name 发布包结构无效."
+            cp -a -- "$script_root/." "$is_sh_dir/" || err "$name 文件安装失败."
+            download_script_tree_valid "$is_sh_dir" || err "$name 安装目录结构无效."
             chmod +x "$is_sh_bin" "${is_sh_bin/$is_core/sb}"
             ;;
         caddy)

@@ -7,7 +7,8 @@ runtime_doctor() {
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
-    local warn_core_version=0 warn_cloudflared_version=0 warn_caddy_security=0 warn_sing_box_compat=0
+    local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0
+    local warn_caddy_security=0 warn_sing_box_compat=0
     local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
@@ -84,6 +85,9 @@ runtime_doctor() {
     msg "------------- 服务与端口 -------------"
     if ! runtime_doctor_cloudflared_version; then
         warn_cloudflared_version=1
+    fi
+    if ! runtime_doctor_cloudflared_runtime; then
+        warn_cloudflared_runtime=1
     fi
     if ! runtime_doctor_caddy_security; then
         warn_caddy_security=1
@@ -214,6 +218,9 @@ runtime_doctor() {
         fi
         if [[ $warn_caddy_security -eq 1 ]]; then
             msg "14) Caddy 风险：检查上方版本和配置清单；避免 forward_auth/reverse_proxy 风险组合，并关注 2.11.5 正式版"
+        fi
+        if [[ $warn_cloudflared_runtime -eq 1 ]]; then
+            msg "15) cloudflared 运行异常：检查受管隧道重启次数和最近日志；Docker bridge/QUIC 问题优先在维护窗口验证 HTTP/2 或 2026.8.2"
         fi
         msg "----------------------------------------"
     fi

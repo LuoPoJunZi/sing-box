@@ -280,6 +280,59 @@ installer_tar_paths_safe() {
     done < <(tar tzf "$archive")
 }
 
+installer_script_tree_valid() {
+    local root=$1 required
+    local required_files=(install.sh sing-box.sh src/init.sh src/utils.sh src/core.sh)
+
+    [[ -d $root ]] || return 1
+    for required in "${required_files[@]}"; do
+        [[ -f $root/$required && ! -L $root/$required ]] || return 1
+    done
+}
+
+installer_script_tree_root() {
+    local extracted_root=$1 entry candidate="" count=0
+
+    if installer_script_tree_valid "$extracted_root"; then
+        printf '%s\n' "$extracted_root"
+        return
+    fi
+    while IFS= read -r -d '' entry; do
+        candidate=$entry
+        ((count += 1))
+    done < <(find "$extracted_root" -mindepth 1 -maxdepth 1 -print0 2> /dev/null)
+    if [[ $count -eq 1 && -d $candidate ]] && installer_script_tree_valid "$candidate"; then
+        printf '%s\n' "$candidate"
+        return
+    fi
+    return 1
+}
+
+installer_prepare_script_archive() {
+    local archive=$1 stage_root=$2
+    local unpack_root="$stage_root/unpacked" content_root="$stage_root/content" source_root=""
+
+    [[ ! -e $stage_root ]] || return 1
+    installer_tar_paths_safe "$archive" || return 1
+    mkdir -p "$unpack_root" "$content_root" || return 1
+    tar zxf "$archive" -C "$unpack_root" || return 1
+    if find "$unpack_root" -type l -print -quit | grep -q .; then
+        return 1
+    fi
+    source_root=$(installer_script_tree_root "$unpack_root") || return 1
+    cp -a -- "$source_root/." "$content_root/" || return 1
+    installer_script_tree_valid "$content_root"
+}
+
+installer_copy_local_script_tree() {
+    local source_root=$1 destination_root=$2
+
+    mkdir -p "$destination_root" || return 1
+    cp -a -- "$source_root/install.sh" "$source_root/sing-box.sh" "$destination_root/" || return 1
+    cp -a -- "$source_root/src" "$destination_root/" || return 1
+    installer_script_tree_valid "$destination_root"
+}
+
 download() {
     local name="" tmpfile="" is_ok="" expected=""
     local repo="" tag="" asset=""
@@ -397,6 +450,8 @@ exit_and_del_tmpdir() {
 }
 
 main() {
+    local script_source="" script_stage=""
+
     [[ $# -gt 0 ]] && pass_args "$@"
     check_environment
     init_tmp_paths
@@ -447,6 +502,17 @@ main() {
     get_ip
     check_status
 
+    if [[ ${local_install:-} ]]; then
+        installer_script_tree_valid "$PWD" || err "当前目录不是完整的 sing-box 脚本源码树."
+        script_source=$PWD
+    else
+        script_stage="$tmpdir/script-package"
+        if ! installer_prepare_script_archive "$is_sh_ok" "$script_stage"; then
+            err "脚本发布包结构无效，未写入安装目录."
+        fi
+        script_source="$script_stage/content"
+    fi
+
     if [[ ${is_core_file:-} ]]; then
         mkdir -p "$tmpdir/testzip"
         if ! installer_tar_paths_safe "$is_core_ok" || ! tar zxf "$is_core_ok" --strip-components 1 -C "$tmpdir/testzip" &> /dev/null || [[ ! -f $tmpdir/testzip/$is_core ]]; then
@@ -475,25 +541,27 @@ cron|sing-box update
 cron|/var/log/sing-box
 EOF
     if [[ ${local_install:-} ]]; then
-        cp -rf -- "$PWD"/* "$is_sh_dir"
+        installer_copy_local_script_tree "$script_source" "$is_sh_dir" || err "复制本地脚本文件失败."
     else
-        installer_tar_paths_safe "$is_sh_ok" || err "脚本发布包包含不安全路径."
-        tar zxf "$is_sh_ok" --strip-components=1 -C "$is_sh_dir"
+        cp -a -- "$script_source/." "$is_sh_dir/" || err "安装脚本文件失败."
     fi
+    installer_script_tree_valid "$is_sh_dir" || err "安装后的脚本目录结构无效."
 
     mkdir -p "$is_core_dir/bin"
     if [[ ${is_core_file:-} ]]; then
-        cp -rf -- "$tmpdir/testzip"/* "$is_core_dir/bin"
+        cp -a -- "$tmpdir/testzip/." "$is_core_dir/bin/" || err "复制 ${is_core_name} 文件失败."
     else
         installer_tar_paths_safe "$is_core_ok" || err "${is_core_name} 发布包包含不安全路径."
-        tar zxf "$is_core_ok" --strip-components 1 -C "$is_core_dir/bin"
+        tar zxf "$is_core_ok" --strip-components 1 -C "$is_core_dir/bin" || err "${is_core_name} 发布包解压失败."
     fi
+    [[ -f $is_core_bin && ! -L $is_core_bin ]] || err "${is_core_name} 发布包中缺少核心文件."
 
-    printf '%s\n' "alias sb=$is_sh_bin" >> /root/.bashrc
-    printf '%s\n' "alias $is_core=$is_sh_bin" >> /root/.bashrc
+    grep -qxF "alias sb=$is_sh_bin" /root/.bashrc 2> /dev/null || printf '%s\n' "alias sb=$is_sh_bin" >> /root/.bashrc
+    grep -qxF "alias $is_core=$is_sh_bin" /root/.bashrc 2> /dev/null || printf '%s\n' "alias $is_core=$is_sh_bin" >> /root/.bashrc
 
-    ln -sf -- "$is_sh_dir/$is_core.sh" "$is_sh_bin"
-    ln -sf -- "$is_sh_dir/$is_core.sh" "${is_sh_bin/$is_core/sb}"
+    chmod +x "$is_core_bin" "$is_sh_dir/$is_core.sh" || err "设置可执行权限失败."
+    ln -sfn -- "$is_sh_dir/$is_core.sh" "$is_sh_bin" || err "创建 ${is_core} 命令链接失败."
+    ln -sfn -- "$is_sh_dir/$is_core.sh" "${is_sh_bin/$is_core/sb}" || err "创建 sb 命令链接失败."
 
     if [[ ${jq_not_found:-} ]]; then
         mv -f -- "$is_jq_ok" /usr/bin/jq
@@ -501,7 +569,7 @@ EOF
         chmod +x /usr/bin/jq
     fi
 
-    chmod +x "$is_core_bin" "$is_sh_bin" "${is_sh_bin/$is_core/sb}"
+    [[ -x $is_sh_bin && -x ${is_sh_bin/$is_core/sb} ]] || err "命令链接未指向有效脚本."
 
     mkdir -p "$is_log_dir"
     msg ok "生成配置文件..."
@@ -510,17 +578,17 @@ EOF
     # 我们直接从 utils.sh 里加载。
     # 由于是初次安装环境还未配置，我们临时加载 utils.sh
     # shellcheck source=/dev/null
-    . "$is_sh_dir/src/utils.sh"
+    . "$is_sh_dir/src/utils.sh" || err "加载安装工具模块失败."
     # Used by dynamically sourced node modules.
     # shellcheck disable=SC2034
     is_new_install=1
-    install_service "$is_core" &> /dev/null
+    install_service "$is_core" &> /dev/null || err "写入 ${is_core} systemd 服务失败."
 
     mkdir -p "$is_conf_dir"
 
     # 模拟环境以供 add reality 运行
     # shellcheck source=/dev/null
-    . "$is_sh_dir/src/init.sh"
+    . "$is_sh_dir/src/init.sh" || err "加载脚本运行模块失败."
 
     # 强制在静默模式下创建节点，防止备注卡死
     # shellcheck disable=SC2034
@@ -533,4 +601,6 @@ EOF
     exit_and_del_tmpdir ok
 }
 
-main "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    main "$@"
+fi

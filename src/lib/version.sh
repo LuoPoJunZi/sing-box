@@ -30,7 +30,7 @@ sing_box_minimum_supported_version() {
 }
 
 sing_box_recommended_stable_version() {
-    printf '%s\n' '1.14.0'
+    printf '%s\n' '1.14.2'
 }
 
 sing_box_recommended_min_version() {

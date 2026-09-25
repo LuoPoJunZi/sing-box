@@ -20,7 +20,7 @@ msg() { :; }
 . src/core/runtime/doctor.sh
 
 [[ $(sing_box_minimum_supported_version) == 1.13.19 ]] || fail "minimum supported sing-box version changed unexpectedly"
-[[ $(sing_box_recommended_stable_version) == 1.14.0 ]] || fail "recommended stable sing-box version is not 1.14.0"
+[[ $(sing_box_recommended_stable_version) == 1.14.2 ]] || fail "recommended stable sing-box version is not 1.14.2"
 [[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
 [[ $(caddy_recommended_stable_version) == 2.11.4 ]] || fail "recommended Caddy baseline is not 2.11.4"
 version_is_less_than 1.13.18 1.13.19 || fail "older sing-box version was not detected"
@@ -138,12 +138,12 @@ is_core_ver=1.13.19
 if runtime_doctor_sing_box_version; then
     fail "minimum supported sing-box version was treated as recommended"
 fi
-grep -q '推荐稳定版 1.14.0' <<< "$doctor_output" || fail "doctor did not recommend sing-box 1.14.0"
+grep -q '推荐稳定版 1.14.2' <<< "$doctor_output" || fail "doctor did not recommend sing-box 1.14.2"
 
 doctor_output=""
-is_core_ver=1.14.0
+is_core_ver=1.14.2
 runtime_doctor_sing_box_version || fail "recommended sing-box stable version failed doctor"
-grep -q '推荐稳定版基线 1.14.0' <<< "$doctor_output" || fail "doctor did not accept sing-box 1.14.0"
+grep -q '推荐稳定版基线 1.14.2' <<< "$doctor_output" || fail "doctor did not accept sing-box 1.14.2"
 
 doctor_output=""
 is_core_ver=1.15.0-alpha.1
@@ -182,5 +182,33 @@ if runtime_doctor_caddy_security; then
     fail "old Caddy version unexpectedly passed the recommended baseline"
 fi
 grep -q '低于已复核稳定基线 2.11.4' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
+
+cloudflared() { printf '%s\n' 'cloudflared version 2026.9.3'; }
+systemctl() {
+    case $1 in
+        list-unit-files) printf '%s\n' 'cftunnel-443.service enabled' ;;
+        show) printf '%s\n' '4' ;;
+    esac
+}
+journalctl() {
+    printf '%s\n' 'failed with CRYPTO_ERROR 0x178 (remote): tls: no application protocol'
+}
+doctor_output=""
+if runtime_doctor_cloudflared_runtime; then
+    fail "cloudflared restart/QUIC failure passed doctor"
+fi
+grep -q '已自动重启 4 次' <<< "$doctor_output" || fail "doctor did not report cloudflared restart count"
+grep -q '未回退 HTTP/2' <<< "$doctor_output" || fail "doctor did not report cloudflared QUIC fallback failure"
+
+systemctl() {
+    case $1 in
+        list-unit-files) printf '%s\n' 'cftunnel-443.service enabled' ;;
+        show) printf '%s\n' '0' ;;
+    esac
+}
+journalctl() { :; }
+doctor_output=""
+runtime_doctor_cloudflared_runtime || fail "healthy cloudflared service failed doctor"
+grep -q '未发现频繁重启或已知 QUIC 错误特征' <<< "$doctor_output" || fail "doctor did not report healthy cloudflared services"
 
 echo "[upstream-compat] ok"
