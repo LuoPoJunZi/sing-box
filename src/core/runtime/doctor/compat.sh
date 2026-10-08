@@ -28,7 +28,7 @@ runtime_doctor_sing_box_version() {
 }
 
 runtime_doctor_cloudflared_version() {
-    local version
+    local version recommended
 
     command -v cloudflared > /dev/null 2>&1 || return 0
     version=$(cloudflared --version 2> /dev/null | awk 'NR == 1 {print $3}')
@@ -41,7 +41,13 @@ runtime_doctor_cloudflared_version() {
         runtime_doctor_info "请执行 sb update cloudflared，升级到 2026.8.2 或更高版本."
         return 1
     fi
-    runtime_doctor_ok "cloudflared 版本: $version"
+    recommended=$(cloudflared_recommended_stable_version)
+    if version_is_less_than "$version" "$recommended"; then
+        runtime_doctor_warn "cloudflared 版本: $version，低于已复核稳定基线 $recommended"
+        runtime_doctor_info "新版包含 QUIC 请求取消和 Access 路径规范化修复；请在维护窗口执行 sb update cloudflared."
+        return 1
+    fi
+    runtime_doctor_ok "cloudflared 版本: $version，已达到稳定基线 $recommended；版本检查不代表已知 QUIC 报告已修复"
 }
 
 runtime_doctor_cloudflared_runtime() {
@@ -65,7 +71,7 @@ runtime_doctor_cloudflared_runtime() {
         logs=$(journalctl --unit "$unit" --since "24 hours ago" --no-pager --lines=200 2> /dev/null || true)
         if grep -Eqi 'QueueProbePacket|segmentation violation|SIGSEGV' <<< "$logs"; then
             runtime_doctor_warn "cloudflared 隧道: $unit 最近日志包含 Docker bridge/QUIC 崩溃特征"
-            runtime_doctor_info "若该隧道运行在 Docker bridge 中，可先回退到 2026.8.2 或迁移到宿主机 systemd；请勿在业务高峰直接重启."
+            runtime_doctor_info "请先核对 Docker bridge/QUIC 环境，并在维护窗口隔离验证 --protocol http2；不要仅凭日志自动降级或重启."
             issue=1
         fi
         if grep -Eqi 'CRYPTO_ERROR.*no application protocol|no application protocol.*CRYPTO_ERROR' <<< "$logs"; then
@@ -111,6 +117,14 @@ runtime_doctor_caddy_security() {
         runtime_doctor_ok "Caddy 版本: $version，已达到稳定基线 $recommended"
     fi
 
+    if caddy_version_has_stream_regression "$version"; then
+        runtime_doctor_warn "Caddy 长连接: 2.11.6 存在 HTTP/2 崩溃和约 60 秒流中断回归，请在维护窗口升级到 $recommended 或更高稳定版"
+        issue=1
+    elif version_is_prerelease "$version"; then
+        runtime_doctor_warn "Caddy 版本: $version 是预发布版，推荐稳定版为 $recommended"
+        issue=1
+    fi
+
     if ! caddy_version_has_forward_auth_risk "$version"; then
         return "$issue"
     fi
@@ -144,7 +158,7 @@ runtime_doctor_caddy_security() {
         detail=$(basename "$config_file")
         msg "  - $detail ($config_file)"
     done
-    runtime_doctor_info "请先拆分或停用上述组合，并在 Caddy 2.11.5 正式发布后升级；脚本默认生成的配置不使用 forward_auth."
+    runtime_doctor_info "该问题已在后续正式版修复，建议在维护窗口升级到 $recommended 或更高稳定版；脚本默认配置不使用 forward_auth."
     return 1
 }
 

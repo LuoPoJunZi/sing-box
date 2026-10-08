@@ -8,7 +8,7 @@ runtime_doctor() {
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
     local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0
-    local warn_caddy_security=0 warn_sing_box_compat=0
+    local warn_caddy_security=0 warn_sing_box_compat=0 warn_reality=0
     local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
@@ -80,7 +80,9 @@ runtime_doctor() {
     runtime_doctor_client_compat
 
     msg "------------- VLESS / Reality -------------"
-    runtime_doctor_reality
+    if ! runtime_doctor_reality; then
+        warn_reality=1
+    fi
 
     msg "------------- 服务与端口 -------------"
     if ! runtime_doctor_cloudflared_version; then
@@ -217,10 +219,13 @@ runtime_doctor() {
             msg "13) cloudflared 版本异常：执行 sb update cloudflared，禁止继续使用 2026.8.0/2026.8.1"
         fi
         if [[ $warn_caddy_security -eq 1 ]]; then
-            msg "14) Caddy 风险：检查上方版本和配置清单；避免 forward_auth/reverse_proxy 风险组合，并关注 2.11.5 正式版"
+            msg "14) Caddy 风险：检查上方版本和配置清单；在维护窗口验证并升级至 $(caddy_recommended_stable_version) 或更高稳定版，避免 2.11.6 长连接回归"
         fi
         if [[ $warn_cloudflared_runtime -eq 1 ]]; then
-            msg "15) cloudflared 运行异常：检查受管隧道重启次数和最近日志；Docker bridge/QUIC 问题优先在维护窗口验证 HTTP/2 或 2026.8.2"
+            msg "15) cloudflared 运行异常：检查受管隧道重启次数和最近日志；Docker bridge/QUIC 问题优先在隔离环境或维护窗口验证 HTTP/2，不自动降级"
+        fi
+        if [[ $warn_reality -eq 1 ]]; then
+            msg "16) Reality 上游报告：跟踪 SagerNet/sing-box #4610；先隔离复现，等待经验证的上游稳定修复，不在现有业务上试改"
         fi
         msg "----------------------------------------"
     fi

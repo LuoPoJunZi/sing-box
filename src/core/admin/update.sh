@@ -119,9 +119,20 @@ admin_update_core() {
 
 admin_update_caddy() {
     local candidate="$download_stage_root/caddy" old_binary="$download_stage_dir/caddy.old"
+    local candidate_version
 
-    if ! "$candidate" version > /dev/null 2>&1; then
+    if ! candidate_version=$("$candidate" version 2> /dev/null); then
         admin_update_abort "Caddy 候选文件无法运行."
+        return 1
+    fi
+    candidate_version=$(awk 'NR == 1 {print $1}' <<< "$candidate_version")
+    candidate_version=${candidate_version%$'\r'}
+    if [[ -z $candidate_version || $(version_normalize "$candidate_version") != "${is_new_ver#v}" ]]; then
+        admin_update_abort "Caddy 候选文件无法运行或版本与目标不一致."
+        return 1
+    fi
+    if caddy_version_has_stream_regression "$candidate_version"; then
+        admin_update_abort "Caddy 2.11.6 存在长连接回归，已拒绝替换."
         return 1
     fi
     if [[ -f $is_caddyfile ]] && ! "$candidate" validate --config "$is_caddyfile" --adapter caddyfile > /dev/null 2>&1; then

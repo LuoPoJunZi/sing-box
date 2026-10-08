@@ -246,4 +246,11 @@ runtime_doctor_reality() {
         runtime_doctor_ok "VLESS-REALITY: 本机 TCP 监听正常"
     fi
     runtime_doctor_info "即使本机监听正常，云厂商安全组仍需单独放行对应 TCP 端口"
+    if sing_box_version_has_reported_reality_fallback_risk "${is_core_ver:-}"; then
+        runtime_doctor_warn "VLESS-REALITY 上游报告: $is_core_ver 存在伪装目标关闭后探测连接未同步关闭的报告，可能产生识别特征"
+        runtime_doctor_info "SagerNet/sing-box #4610 尚未确认修复；更换 SNI/Short ID 或设置握手超时不应被当作根治方案."
+        runtime_doctor_info "仅在隔离环境复现并跟踪上游稳定修复；doctor 不探测公网、不更改节点、不重启服务."
+        return 1
+    fi
+    return 0
 }

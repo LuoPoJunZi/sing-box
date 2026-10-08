@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 # Offline by default. The real-core and VPS tests have explicit entry points.
 for test_file in tests/unit/test-*.sh tests/integration/test-*.sh; do
-    [[ $test_file == */test-sing-box-release.sh ]] && continue
+    [[ $test_file == */test-sing-box-release.sh || $test_file == */test-upstream-runtime.sh ]] && continue
     echo "[test] $test_file"
     bash "$test_file"
 done

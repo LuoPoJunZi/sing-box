@@ -78,6 +78,23 @@ jobs:
           bash scripts/check-structure.sh
           bash scripts/check-repo-hygiene.sh
 
+  upstream-runtime:
+    name: upstream loopback runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install loopback test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          node --version
+
+      - name: Check verified upstream binaries and long-lived loopback connections
+        run: bash tests/integration/test-upstream-runtime.sh
+
   share-links:
     name: share links
     runs-on: ubuntu-latest

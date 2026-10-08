@@ -66,7 +66,8 @@ CI now runs:
 - `tests/unit/test-dns-migration.sh`
 - `tests/integration/test-update-transaction.sh`
 - `tests/unit/test-upstream-compat.sh`
-- `tests/integration/test-sing-box-release.sh` (downloads the verified sing-box 1.14.0 release and validates representative configurations)
+- `tests/integration/test-sing-box-release.sh` (downloads the verified recommended sing-box release and validates all 23 production configurations)
+- `tests/integration/test-upstream-runtime.sh` (opt-in verified upstream binaries; loopback-only long-connection tests and an explicit known-failure Reality reproduction)
 - `shfmt -d -i 4 -ci -sr`
 - `scripts/check-structure.sh`
 - `scripts/check-share-links.sh`
@@ -74,6 +75,19 @@ CI now runs:
 - `scripts/check-release.sh`
 
 Please run equivalent checks locally before opening a PR.
+
+Run `bash tests/integration/test-upstream-runtime.sh` explicitly for the network-backed
+runtime suite. It requires Node 18+, jq, curl and tar; all listeners use `127.0.0.1`,
+all files are temporary, and it never uses systemd, firewall rules or a public tunnel.
+It checks cloudflared version/protocol CLI only, not Cloudflare edge connectivity.
+On Windows/Git Bash, supply already verified `CADDY_BIN`, `SING_BOX_CORE_BIN` and
+`CLOUDFLARED_BIN`; Linux downloads the recommended binaries with GitHub SHA-256 checks.
+The two Reality probes must first receive data and EOF from their direct control
+target. A fallback that forwards the data but does not propagate EOF in 3 seconds
+is reported as `XFAIL ... NOT FIXED`, not a passing security fix. Set
+`UPSTREAM_REALITY_REQUIRE_FIXED=1` to make it block strict fix acceptance. No field
+change, timeout tweak or passing Caddy test should be presented as a Reality fix.
+The normal offline suite skips both network-backed integration entry points.
 When preparing a public release, run `RELEASE_CHECK_STRICT_TAG=1 bash scripts/check-release.sh` if you want the check to fail when the tag already exists locally.
 
 ## Repository Hygiene

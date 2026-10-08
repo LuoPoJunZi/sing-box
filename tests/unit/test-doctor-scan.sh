@@ -2,6 +2,7 @@
 set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
+. src/lib/version.sh
 . src/core/runtime/doctor.sh
 . src/core/utils/compat.sh
 tmp_dir=$(mktemp -d)
@@ -24,4 +25,21 @@ output=$(runtime_doctor_client_compat || true)
 printf '%s\n' '{"dns":{"servers":[{"address":"local"}]}}' > "$is_config_json"
 output=$(runtime_doctor_sing_box_config_compat || true)
 [[ $output == *'main.json'* && $output == *'待迁移配置'* ]]
+# Report the reviewed upstream Reality bug only when Reality nodes exist.
+printf '%s\n' '{"inbounds":[{"type":"vless","listen_port":31001,"users":[{"uuid":"test"}],"tls":{"reality":{"enabled":true,"private_key":"test","short_id":["0123abcd"],"handshake":{"server":"example.com"}},"server_name":"example.com"}}],"outbounds":[{"tag":"public_key_test"}]}' > "$is_conf_dir/reality.json"
+runtime_doctor_port_listening() { return 0; }
+is_core_ver=1.14.2
+if runtime_doctor_reality > "$tmp_dir/output"; then
+    echo '[doctor-scan] reported Reality risk did not return a warning' >&2
+    exit 1
+fi
+output=$(< "$tmp_dir/output")
+[[ $output == *'#4610'* && $output == *'尚未确认修复'* && $output == *'不重启服务'* ]]
+is_core_ver=1.14.1
+output=$(runtime_doctor_reality || true)
+[[ $output != *'#4610'* ]]
+rm "$is_conf_dir/reality.json"
+is_core_ver=1.14.2
+output=$(runtime_doctor_reality || true)
+[[ $output == *'未发现配置'* && $output != *'#4610'* ]]
 echo "[doctor-scan] ok"

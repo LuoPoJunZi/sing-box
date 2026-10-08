@@ -105,6 +105,10 @@ download_stage_component() {
             asset=code.tar.gz
             ;;
         caddy)
+            if caddy_version_has_stream_regression "$version"; then
+                err "Caddy $version 存在长连接回归，已拒绝安装；请使用 $(caddy_recommended_stable_version) 或更高稳定版."
+                return 1
+            fi
             name=Caddy
             repo=$is_caddy_repo
             asset="caddy_${version#v}_linux_${is_arch}.tar.gz"
@@ -173,9 +177,13 @@ download_stage_component() {
 
 download() {
     latest_ver=$2
-    local script_extract="" script_root=""
+    local script_extract="" script_root="" candidate_version=""
     [[ ! $latest_ver ]] && get_latest_version "$1"
     github_release_tag_is_safe "$latest_ver" || err "Release 版本号包含不安全字符: $latest_ver"
+    if [[ $1 == caddy ]] && caddy_version_has_stream_regression "$latest_ver"; then
+        err "Caddy $latest_ver 存在长连接回归，已拒绝安装；请使用 $(caddy_recommended_stable_version) 或更高稳定版."
+        return 1
+    fi
     tmpdir=$(mktemp -d 2> /dev/null || mktemp -d -t 'tmp-XXXXXX')
 
     case $1 in
@@ -212,6 +220,18 @@ download() {
             download_file
             download_tar_paths_safe "$tmpfile" || err "$name 发布包包含不安全路径."
             tar zxf "$tmpfile" -C "$tmpdir" || err "$name 发布包解压失败."
+            if ! candidate_version=$("$tmpdir/caddy" version 2> /dev/null); then
+                rm -rf -- "$tmpdir"
+                err "Caddy 候选文件无法运行."
+                return 1
+            fi
+            candidate_version=$(awk 'NR == 1 {print $1}' <<< "$candidate_version")
+            candidate_version=${candidate_version%$'\r'}
+            if [[ -z $candidate_version || $(version_normalize "$candidate_version") != "${latest_ver#v}" ]] || caddy_version_has_stream_regression "$candidate_version"; then
+                rm -rf -- "$tmpdir"
+                err "Caddy 候选文件无法运行、版本不匹配或存在长连接回归."
+                return 1
+            fi
             cp -f "$tmpdir/caddy" "$is_caddy_bin"
             chmod +x "$is_caddy_bin"
             managed_record file "$is_caddy_bin"

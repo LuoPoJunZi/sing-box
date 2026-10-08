@@ -22,7 +22,15 @@ msg() { :; }
 [[ $(sing_box_minimum_supported_version) == 1.13.19 ]] || fail "minimum supported sing-box version changed unexpectedly"
 [[ $(sing_box_recommended_stable_version) == 1.14.2 ]] || fail "recommended stable sing-box version is not 1.14.2"
 [[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
-[[ $(caddy_recommended_stable_version) == 2.11.4 ]] || fail "recommended Caddy baseline is not 2.11.4"
+[[ $(caddy_recommended_stable_version) == 2.11.7 ]] || fail "recommended Caddy baseline is not 2.11.7"
+[[ $(cloudflared_recommended_stable_version) == 2026.10.0 ]] || fail "recommended cloudflared baseline is not 2026.10.0"
+caddy_version_has_stream_regression v2.11.6 || fail "Caddy streaming regression was not detected"
+if caddy_version_has_stream_regression 2.11.7; then fail "fixed Caddy version was marked regressed"; fi
+sing_box_version_has_reported_reality_fallback_risk v1.14.2 || fail "reported Reality version was not detected"
+sing_box_version_has_reported_reality_fallback_risk 1.15.0-alpha.10 || fail "reported Reality preview was not detected"
+if sing_box_version_has_reported_reality_fallback_risk 1.14.1 || sing_box_version_has_reported_reality_fallback_risk 1.14.3; then
+    fail "unreviewed Reality version was declared affected"
+fi
 version_is_less_than 1.13.18 1.13.19 || fail "older sing-box version was not detected"
 if version_is_less_than 1.13.19 1.13.19; then
     fail "equal sing-box version was treated as older"
@@ -174,16 +182,33 @@ if runtime_doctor_caddy_security; then
     fail "Caddy forward_auth/reverse_proxy risk passed doctor"
 fi
 grep -q 'risk.conf' <<< "$doctor_output" || fail "doctor did not list the risky Caddy config"
-grep -q '2.11.5' <<< "$doctor_output" || fail "doctor did not mention the patched Caddy target"
+grep -q '2.11.7' <<< "$doctor_output" || fail "doctor did not mention the patched Caddy target"
+if grep -q '正式发布后' <<< "$doctor_output"; then fail "doctor still waits for an already released Caddy fix"; fi
 
 doctor_output=""
 is_caddy_ver=v2.10.2
 if runtime_doctor_caddy_security; then
     fail "old Caddy version unexpectedly passed the recommended baseline"
 fi
-grep -q '低于已复核稳定基线 2.11.4' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
+grep -q '低于已复核稳定基线 2.11.7' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
+
+doctor_output=""
+is_caddy_ver=v2.11.6
+if runtime_doctor_caddy_security; then fail "Caddy 2.11.6 regression passed doctor"; fi
+grep -q '约 60 秒' <<< "$doctor_output" || fail "doctor did not report Caddy streaming regression"
+doctor_output=""
+is_caddy_ver=v2.11.7
+runtime_doctor_caddy_security || fail "fixed Caddy version failed doctor"
+if grep -q '上游错连风险\|长连接:' <<< "$doctor_output"; then fail "fixed Caddy version has obsolete warnings"; fi
 
 cloudflared() { printf '%s\n' 'cloudflared version 2026.9.3'; }
+doctor_output=""
+if runtime_doctor_cloudflared_version; then fail "old cloudflared version passed the new baseline"; fi
+grep -q '2026.10.0' <<< "$doctor_output" || fail "doctor did not recommend cloudflared 2026.10.0"
+cloudflared() { printf '%s\n' 'cloudflared version 2026.10.0'; }
+doctor_output=""
+runtime_doctor_cloudflared_version || fail "current cloudflared version failed doctor"
+grep -q '不代表' <<< "$doctor_output" || fail "doctor incorrectly implies all QUIC reports are fixed"
 systemctl() {
     case $1 in
         list-unit-files) printf '%s\n' 'cftunnel-443.service enabled' ;;
