@@ -44,7 +44,7 @@ runtime_doctor_cloudflared_version() {
     recommended=$(cloudflared_recommended_stable_version)
     if version_is_less_than "$version" "$recommended"; then
         runtime_doctor_warn "cloudflared 版本: $version，低于已复核稳定基线 $recommended"
-        runtime_doctor_info "新版包含 QUIC 请求取消和 Access 路径规范化修复；请在维护窗口执行 sb update cloudflared."
+        runtime_doctor_info "新基线包含 Go 安全工具链更新；请在维护窗口验证后执行 sb update cloudflared，QUIC 报告仍需单独验收."
         return 1
     fi
     runtime_doctor_ok "cloudflared 版本: $version，已达到稳定基线 $recommended；版本检查不代表已知 QUIC 报告已修复"

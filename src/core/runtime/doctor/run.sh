@@ -8,7 +8,7 @@ runtime_doctor() {
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
     local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0
-    local warn_caddy_security=0 warn_sing_box_compat=0 warn_reality=0
+    local warn_caddy_security=0 warn_sing_box_compat=0 warn_reality=0 warn_build_security=0
     local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
@@ -75,6 +75,11 @@ runtime_doctor() {
     runtime_doctor_manifest
     runtime_doctor_disk "$is_core_dir" "/etc/sing-box"
     runtime_doctor_disk "$is_log_dir" "/var/log/sing-box"
+
+    msg "------------- 编译依赖安全 -------------"
+    if ! runtime_doctor_build_security; then
+        warn_build_security=1
+    fi
 
     msg "------------- 客户端兼容 -------------"
     runtime_doctor_client_compat
@@ -226,6 +231,9 @@ runtime_doctor() {
         fi
         if [[ $warn_reality -eq 1 ]]; then
             msg "16) Reality 上游报告：跟踪 SagerNet/sing-box #4610；先隔离复现，等待经验证的上游稳定修复，不在现有业务上试改"
+        fi
+        if [[ $warn_build_security -eq 1 ]]; then
+            msg "17) 编译依赖：按上方 Go/x/net 信息核查 HTTP/2 公告；等待或验证上游安全构建，组件版本/长连接测试通过不代表已修复"
         fi
         msg "----------------------------------------"
     fi

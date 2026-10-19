@@ -88,7 +88,7 @@ if grep -Eq 'node_prepare_protocol|install_service|systemctl[[:space:]]+(start|r
     echo "[structure] query modules must not perform write-side preparation"
     fail=1
 fi
-for module in output system compat clients run; do
+for module in output system compat build clients run; do
     check_file "src/core/runtime/doctor/$module.sh"
 done
 for test_group in unit integration e2e fixtures; do

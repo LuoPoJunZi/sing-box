@@ -66,6 +66,7 @@ CI now runs:
 - `tests/unit/test-dns-migration.sh`
 - `tests/integration/test-update-transaction.sh`
 - `tests/unit/test-upstream-compat.sh`
+- `tests/unit/test-build-security.sh` (Go/x/net boundaries, missing metadata, replacements and read-only probes)
 - `tests/integration/test-sing-box-release.sh` (downloads the verified recommended sing-box release and validates all 23 production configurations)
 - `tests/integration/test-upstream-runtime.sh` (opt-in verified upstream binaries; loopback-only long-connection tests and an explicit known-failure Reality reproduction)
 - `shfmt -d -i 4 -ci -sr`
@@ -88,6 +89,21 @@ is reported as `XFAIL ... NOT FIXED`, not a passing security fix. Set
 `UPSTREAM_REALITY_REQUIRE_FIXED=1` to make it block strict fix acceptance. No field
 change, timeout tweak or passing Caddy test should be presented as a Reality fix.
 The normal offline suite skips both network-backed integration entry points.
+
+The stable compatibility baseline is sing-box 1.14.3; it is not a security claim.
+`sb doctor` reads Caddy `build-info` and core `version`. It never invokes Go:
+even `go version -m` may initialize telemetry/cache state. Complete missing
+metadata manually with a binary copy on an isolated development machine;
+Go is never installed by doctor and unverified metadata must remain a warning.
+GO-2026-6603/GO-2026-6617 need Go 1.26.9 (or 1.27.2+) and x/net 0.60.0+.
+Missing metadata and unreviewed replacements/toolchains must warn, never pass.
+Check effective module replacements, not just the requested version. A current
+official binary can still have old build dependencies. Do not present this
+limited metadata check as a full vulnerability scan or a public exploit test.
+Reality versions outside the explicit reviewed list must remain unreviewed until
+the dependency/code and isolated EOF behavior have been checked; never infer a
+fix from a newer version number. Do not silently patch or replace upstream cores.
+
 When preparing a public release, run `RELEASE_CHECK_STRICT_TAG=1 bash scripts/check-release.sh` if you want the check to fail when the tag already exists locally.
 
 ## Repository Hygiene

@@ -252,5 +252,7 @@ runtime_doctor_reality() {
         runtime_doctor_info "仅在隔离环境复现并跟踪上游稳定修复；doctor 不探测公网、不更改节点、不重启服务."
         return 1
     fi
-    return 0
+    runtime_doctor_warn "VLESS-REALITY 上游报告: ${is_core_ver:-未知版本} 的 #4610 修复状态尚未复核，不能因版本未列出就视为已修复"
+    runtime_doctor_info "请核对上游依赖并在隔离环境验证 EOF；doctor 不探测公网、不更改节点、不重启服务."
+    return 1
 }

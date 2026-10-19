@@ -18,6 +18,7 @@ for cmd in node jq curl tar; do command -v "$cmd" > /dev/null || {
     exit 1
 }; done
 . src/lib/version.sh
+. src/core/runtime/doctor/build.sh
 . src/lib/download.sh
 . src/core/utils/download.sh
 tmp_dir=$(mktemp -d)
@@ -103,6 +104,22 @@ actual=$("$CLOUDFLARED_BIN" --version | awk 'NR==1 {print $3}')
 # explicitly without running a tunnel or requiring an account/token.
 "$CLOUDFLARED_BIN" tunnel --protocol http2 run --help > "$tmp_dir/tunnel-help"
 echo '[upstream-runtime] cloudflared version/protocol CLI passed (no edge connection or QUIC E2E claim)'
+
+# Report metadata risks separately from functional compatibility. A successful
+# loopback fixture must not imply that old upstream build dependencies are fixed.
+runtime_doctor_ok() { printf '[upstream-build] OK %s\n' "$*"; }
+runtime_doctor_warn() { printf '[upstream-build] WARN %s\n' "$*"; }
+runtime_doctor_info() { printf '[upstream-build] INFO %s\n' "$*"; }
+for component in caddy core cloudflared; do
+    case $component in
+        caddy) binary=$CADDY_BIN ;;
+        core) binary=$SING_BOX_CORE_BIN ;;
+        cloudflared) binary=$CLOUDFLARED_BIN ;;
+    esac
+    if ! runtime_doctor_go_build_binary "$component" "$binary" "$component"; then
+        echo "[upstream-runtime] WARN $component build security is affected/unverified; compatibility is not security acceptance"
+    fi
+done
 
 # Generate the actual production Reality shape; only loopback addresses/ports
 # are substituted by the runtime fixture. No production keys/configs are read.
