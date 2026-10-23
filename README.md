@@ -438,6 +438,25 @@ sb domain del example.com
 
 ## 13. 贡献与致谢
 
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/LuoPoJunZi">
+        <img src="https://github.com/LuoPoJunZi.png?size=96" width="72" alt="LuoPoJunZi"><br>
+        <strong>LuoPoJunZi</strong>
+      </a><br>
+      <sub>sing-box 项目维护者</sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/233boy/sing-box">
+        <img src="https://github.com/233boy.png?size=96" width="72" alt="233boy"><br>
+        <strong>233boy</strong>
+      </a><br>
+      <sub>上游 sing-box 脚本原作者</sub>
+    </td>
+  </tr>
+</table>
+
 - 贡献指南见 [CONTRIBUTING.md](./CONTRIBUTING.md)
 - 核心项目：`SagerNet/sing-box`
 - 本项目基于 233boy 生态做重构与扩展

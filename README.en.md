@@ -429,6 +429,25 @@ For built-in domains, this writes to disable list without source edits.
 
 ## 13. Contribution and Acknowledgements
 
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/LuoPoJunZi">
+        <img src="https://github.com/LuoPoJunZi.png?size=96" width="72" alt="LuoPoJunZi"><br>
+        <strong>LuoPoJunZi</strong>
+      </a><br>
+      <sub>sing-box project maintainer</sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/233boy/sing-box">
+        <img src="https://github.com/233boy.png?size=96" width="72" alt="233boy"><br>
+        <strong>233boy</strong>
+      </a><br>
+      <sub>Original upstream sing-box script author</sub>
+    </td>
+  </tr>
+</table>
+
 - Contribution guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Upstream core: `SagerNet/sing-box`
 - This project is a refactor/extension built on the 233boy ecosystem
