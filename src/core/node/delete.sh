@@ -7,6 +7,7 @@ write_cleanup_replaced_node() {
         ($is_new_protocol != CFtunnel || $previous_port != "$port") ]]; then
         systemctl disable --now "cftunnel-${previous_port}.service" &> /dev/null
         rm -f -- "/lib/systemd/system/cftunnel-${previous_port}.service"
+        remove_cftunnel_token "$previous_port" || return 1
         systemctl daemon-reload
     fi
     if [[ ${is_caddy:-} && ${old_host:-} && $old_host != "${host:-}" &&
@@ -40,6 +41,7 @@ write_del() {
             if [[ $port ]]; then
                 systemctl disable --now cftunnel-${port}.service &> /dev/null
                 rm -f /lib/systemd/system/cftunnel-${port}.service
+                remove_cftunnel_token "$port" || return 1
                 systemctl daemon-reload
                 msg "✅ 已清理对应的 CFtunnel 穿透守护服务 (端口: $port)."
             fi

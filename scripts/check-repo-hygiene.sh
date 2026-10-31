@@ -11,7 +11,7 @@ while IFS= read -r path; do
         AGENTS.md | LOCAL_WORK_MEMORY.md | LOCAL_SING_BOX_BLOG.md | \
             docs/TEST_REPORT_*.md | tests/e2e/loopback-proxy.py | \
             .env | */.env | .env.* | */.env.* | \
-            *.key | *.pem | *.crt | *.cer | *.csr | *.p12 | *.pfx | \
+            *.key | *.token | *.pem | *.crt | *.cer | *.csr | *.p12 | *.pfx | \
             .DS_Store | */.DS_Store | Thumbs.db | */Thumbs.db | Desktop.ini | */Desktop.ini | \
             .idea/* | */.idea/* | .vscode/* | */.vscode/* | \
             *.swp | *.swo | *.stackdump | *~ | \

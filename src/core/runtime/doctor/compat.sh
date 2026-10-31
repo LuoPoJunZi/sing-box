@@ -36,15 +36,15 @@ runtime_doctor_cloudflared_version() {
         runtime_doctor_warn "cloudflared 版本: 无法识别"
         return 1
     fi
-    if cloudflared_version_is_blocked "$version"; then
-        runtime_doctor_warn "cloudflared 版本: $version 已被官方标记为不可使用"
-        runtime_doctor_info "请执行 sb update cloudflared，升级到 2026.8.2 或更高版本."
+    if ! cloudflared_version_is_supported "$version"; then
+        runtime_doctor_warn "cloudflared 版本: $version 未达到最低安全版 $(cloudflared_minimum_safe_version)，或版本格式未核实"
+        runtime_doctor_info "旧版存在 eMudhra 证书信任或 metrics 凭据泄露风险；2026.8.0/2026.8.1 另有路径故障。请在维护窗口验证后执行 sb update cloudflared."
         return 1
     fi
     recommended=$(cloudflared_recommended_stable_version)
     if version_is_less_than "$version" "$recommended"; then
         runtime_doctor_warn "cloudflared 版本: $version，低于已复核稳定基线 $recommended"
-        runtime_doctor_info "新基线包含 Go 安全工具链更新；请在维护窗口验证后执行 sb update cloudflared，QUIC 报告仍需单独验收."
+        runtime_doctor_info "推荐版包含 HTTP/2 并发流回归修复；请在维护窗口验证后执行 sb update cloudflared，QUIC 报告仍需单独验收."
         return 1
     fi
     runtime_doctor_ok "cloudflared 版本: $version，已达到稳定基线 $recommended；版本检查不代表已知 QUIC 报告已修复"

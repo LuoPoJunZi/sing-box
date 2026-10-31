@@ -61,6 +61,10 @@ write_create() {
             esac
 
             local previous_name=${is_config_file:-} previous_port=""
+            if [[ $is_new_protocol == CFtunnel && $cf_token ]]; then
+                cftunnel_create_preflight "$cf_token" "$port" || return 1
+                install_cloudflared || return 1
+            fi
             if [[ $previous_name == *CFtunnel* ]]; then
                 previous_port=$(jq -r '.inbounds[0].listen_port' "$is_conf_dir/$previous_name") || return 1
                 previous_port=${previous_port%$'\r'}
@@ -73,8 +77,7 @@ write_create() {
             write_add_install_caddy_if_needed || return 1
 
             if [[ $is_new_protocol == 'CFtunnel' && $cf_token ]]; then
-                install_cloudflared
-                create_cftunnel_service "$cf_token" "$port"
+                create_cftunnel_service "$cf_token" "$port" || return 1
             fi
 
             if [[ $is_caddy && $host && ! $is_no_auto_tls ]]; then

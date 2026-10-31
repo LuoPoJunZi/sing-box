@@ -25,18 +25,23 @@ assert_warning() {
 }
 
 # Standard Caddy/go version -m formats, CRLF and paths containing spaces.
-safe=$'go\tgo1.26.9\ndep\tgolang.org/x/net\tv0.60.0\th1:test'
+safe=$'go\tgo1.26.10\ndep\tgolang.org/x/net\tv0.60.0\th1:test'
 output=$(runtime_doctor_go_build_report Caddy "$safe") || fail 'fixed build rejected'
 [[ $output != *WARN:* && $output == *'修复基线'* ]] || fail 'fixed build output incorrect'
-output=$(runtime_doctor_go_build_report core $'/tmp/path with spaces/core: go1.27.2\r\n\tdep\tgolang.org/x/net\tv0.61.0\th1:test\r\n') || fail 'Go embedded metadata/CRLF failed'
+output=$(runtime_doctor_go_build_report core $'/tmp/path with spaces/core: go1.27.3\r\n\tdep\tgolang.org/x/net\tv0.61.0\th1:test\r\n') || fail 'Go embedded metadata/CRLF failed'
 for version in go1.26.10 go1.27.3 go1.28.0; do
-    runtime_doctor_go_build_report fixture "${safe/go1.26.9/$version}" > /dev/null || fail "fixed branch rejected: $version"
+    runtime_doctor_go_build_report fixture "${safe/go1.26.10/$version}" > /dev/null || fail "fixed branch rejected: $version"
 done
 for version in go1.25.5 go1.26.8 go1.27.0 go1.27.1; do
-    assert_warning "${safe/go1.26.9/$version}" '受影响版本范围'
+    assert_warning "${safe/go1.26.10/$version}" '受影响版本范围'
 done
 for version in go1.27rc2 devel go1.26.9-custom unknown; do
-    assert_warning "${safe/go1.26.9/$version}" '未核实'
+    assert_warning "${safe/go1.26.10/$version}" '未核实'
+done
+for version in go1.26.9 go1.27.2; do
+    output=$(runtime_doctor_go_build_report fixture "${safe/go1.26.10/$version}") && fail 'HTTP/2-patched build passed eMudhra check'
+    [[ $output == *'eMudhra:'* && $output == *'低于 Go 1.26.10 / 1.27.3'* ]] || fail 'CA-specific warning missing'
+    [[ $output == *'达到已复核 HTTP/2 公告修复基线'* ]] || fail 'HTTP/2 and CA checks were conflated'
 done
 assert_warning "${safe/v0.60.0/v0.59.0}" '低于'
 assert_warning "${safe/v0.60.0/v0.60.0-20261001-test}" '未核实'

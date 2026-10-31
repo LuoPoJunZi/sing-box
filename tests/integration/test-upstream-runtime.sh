@@ -151,3 +151,13 @@ if [[ ${OSTYPE:-} == msys* ]]; then
 fi
 export UPSTREAM_TEST_DIR
 node tests/fixtures/upstream-runtime.mjs
+if [[ ${UPSTREAM_CLOUDFLARED_ISOLATED:-} == 1 ]]; then
+    [[ $platform == linux ]] || {
+        echo 'Isolated cloudflared wire checks require Linux' >&2
+        exit 1
+    }
+    # Downloads happen outside the namespace. Only loopback is enabled inside;
+    # even incidental DNS/version checks cannot reach a public network.
+    sudo -n unshare --net -- bash -c 'ip link set lo up && exec node "$@"' bash \
+        "$ROOT_DIR/tests/fixtures/cloudflared-isolated.mjs" "$CLOUDFLARED_BIN" "$SING_BOX_CORE_BIN" "$tmp_dir"
+fi

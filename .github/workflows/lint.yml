@@ -89,10 +89,12 @@ jobs:
       - name: Install loopback test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq iproute2 util-linux
           node --version
 
       - name: Check verified upstream binaries and long-lived loopback connections
+        env:
+          UPSTREAM_CLOUDFLARED_ISOLATED: "1"
         run: bash tests/integration/test-upstream-runtime.sh
 
   share-links:

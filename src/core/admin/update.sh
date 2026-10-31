@@ -44,11 +44,12 @@ admin_update_core_preflight() {
 admin_update_cloudflared_version_allowed() {
     local version=$1
 
-    if cloudflared_version_is_blocked "$version"; then
-        msg "cloudflared $version 存在官方确认的 HTTP 路径处理问题，已拒绝安装."
-        msg "请使用 cloudflared 2026.8.2 或更高版本."
+    if ! cloudflared_version_is_supported "$version"; then
+        msg "cloudflared $version 未达到安全要求，已拒绝安装."
+        msg "至少需要 $(cloudflared_minimum_safe_version)：修复 eMudhra 证书信任和 metrics 凭据泄露；推荐 $(cloudflared_recommended_stable_version)，并继续拒绝 2026.8.0/2026.8.1 路径故障版本."
         return 1
     fi
+    return 0
 }
 
 admin_update_core() {

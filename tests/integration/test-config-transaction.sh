@@ -105,6 +105,22 @@ wait
 [[ ! -e "$is_conf_dir/new node.json" && -f "$is_conf_dir/Socks-test-12345.json" ]]
 [[ $(cat "$tmp_dir/effects") == cleanupcaddyrestart ]]
 
+# A rejected tunnel setup must not replace the existing node configuration.
+is_config_file="Socks-test-12345.json"
+is_new_protocol=CFtunnel
+cf_token=fixture_token
+before_config=$(cksum "$is_conf_dir/$is_config_file")
+cftunnel_create_preflight() { return 1; }
+install_cloudflared() { fail 'rejected tunnel preflight reached installation'; }
+if write_create server CFtunnel; then fail 'tunnel caller ignored service preflight'; fi
+cftunnel_create_preflight() { return 0; }
+install_cloudflared() { return 1; }
+if write_create server CFtunnel; then fail 'tunnel caller ignored unsafe installed binary'; fi
+[[ $(cksum "$is_conf_dir/$is_config_file") == "$before_config" && $(cat "$tmp_dir/effects") == cleanupcaddyrestart ]]
+unset -f cftunnel_create_preflight install_cloudflared
+unset cf_token
+is_new_protocol=Socks
+
 # Manual Reality edits preserve unrelated JSON and do not restart on rejection.
 is_config_file="Socks-test-12345.json"
 is_reality=1

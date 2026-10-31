@@ -5,5 +5,6 @@
 . "${BASH_SOURCE[0]%/*}/doctor/system.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/compat.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/build.sh"
+. "${BASH_SOURCE[0]%/*}/doctor/tunnel.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/clients.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/run.sh"

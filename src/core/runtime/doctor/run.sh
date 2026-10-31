@@ -7,7 +7,7 @@ runtime_doctor() {
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
-    local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0
+    local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0 warn_cloudflared_security=0
     local warn_caddy_security=0 warn_sing_box_compat=0 warn_reality=0 warn_build_security=0
     local jq_version=""
 
@@ -95,6 +95,9 @@ runtime_doctor() {
     fi
     if ! runtime_doctor_cloudflared_runtime; then
         warn_cloudflared_runtime=1
+    fi
+    if ! runtime_doctor_cloudflared_security; then
+        warn_cloudflared_security=1
     fi
     if ! runtime_doctor_caddy_security; then
         warn_caddy_security=1
@@ -221,7 +224,7 @@ runtime_doctor() {
             msg "12) 配置兼容：先执行 sb backup create pre-migrate，再按上方文件清单迁移；普通旧 DNS address 可由核心更新安全转换"
         fi
         if [[ $warn_cloudflared_version -eq 1 ]]; then
-            msg "13) cloudflared 版本异常：执行 sb update cloudflared，禁止继续使用 2026.8.0/2026.8.1"
+            msg "13) cloudflared 版本异常：维护窗口验证并升级到 $(cloudflared_recommended_stable_version)；最低安全版为 $(cloudflared_minimum_safe_version)，保留旧路径故障版本禁用规则"
         fi
         if [[ $warn_caddy_security -eq 1 ]]; then
             msg "14) Caddy 风险：检查上方版本和配置清单；在维护窗口验证并升级至 $(caddy_recommended_stable_version) 或更高稳定版，避免 2.11.6 长连接回归"
@@ -233,7 +236,10 @@ runtime_doctor() {
             msg "16) Reality 上游报告：跟踪 SagerNet/sing-box #4610；先隔离复现，等待经验证的上游稳定修复，不在现有业务上试改"
         fi
         if [[ $warn_build_security -eq 1 ]]; then
-            msg "17) 编译依赖：按上方 Go/x/net 信息核查 HTTP/2 公告；等待或验证上游安全构建，组件版本/长连接测试通过不代表已修复"
+            msg "17) 编译依赖：分别核查 HTTP/2 公告、eMudhra 补丁和系统 CA；等待或验证上游安全构建，组件版本/长连接测试通过不代表已修复"
+        fi
+        if [[ $warn_cloudflared_security -eq 1 ]]; then
+            msg "18) cloudflared 凭据/metrics：按上方提示在维护窗口核查 token 文件权限及回环监听；已有服务不会自动迁移或重启"
         fi
         msg "----------------------------------------"
     fi

@@ -105,26 +105,29 @@ sb status   # 查看运行状态
 - Trojan 和 VMess-QUIC 只使用 `pcs` 固定证书，不再导出 `insecure/allowInsecure`。
 - Hysteria2 按官方格式使用 `insecure=1 + pinSHA256`；TUIC 通用链接使用 `insecure=1 + pcs`。这两类链接不会允许缺少固定指纹的单独 `insecure`。
 - v2rayN 的 sing-box 出站暂不会把 URI 的 `pcs` 映射为 sing-box 公钥指纹，因此 `sb info <配置名>` 会继续输出 `certificate_public_key_sha256` 安全配置片段。
-- 客户端建议至少使用 v2rayN `7.24.9` 和 Xray-core `26.7.11`；前者修复旧内置下载器的中间人风险，后者修复证书固定相关问题。
-- 截至 2026-10-19，v2rayN [`7.25.6`](https://github.com/2dust/v2rayN/releases/tag/7.25.6) 是支持并锁定 sing-box 1.14 配置范围的稳定版。切换内核前仍需按上方提示手动配置证书固定，不能假定 URI 的 `pcs` 会在 sing-box 下自动生效；本次不改变现有分享链接字段。
+- 客户端建议至少使用 v2rayN `7.24.9` 和 Xray-core [`26.10.21`](https://github.com/XTLS/Xray-core/releases/tag/v26.10.21)；后者是 eMudhra 证书事件紧急安全更新，已撤下的 `26.10.10` / `26.10.17` 不应继续使用。最新正式版为 [`26.10.29`](https://github.com/XTLS/Xray-core/releases/tag/v26.10.29)，请核对客户端实际使用的内核，不能只看 GUI 版本。
+- 截至 2026-10-31，v2rayN [`7.25.6`](https://github.com/2dust/v2rayN/releases/tag/7.25.6) 是支持并锁定 sing-box 1.14 配置范围的稳定版。切换内核前仍需按上方提示手动配置证书固定，不能假定 URI 的 `pcs` 会在 sing-box 下自动生效；本次不改变现有分享链接字段。
 - 如果证书指纹无法计算，脚本会拒绝生成该节点的 URL、二维码和订阅条目，不会退回到不验证证书。
 - 脚本更新后，客户端中已经导入的旧节点不会自动刷新；请重新运行 `sb url <配置名>` 或重新生成订阅后导入。
 
-兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.9](https://github.com/2dust/v2rayN/releases/tag/7.24.9)、[v2rayN 7.25.6](https://github.com/2dust/v2rayN/releases/tag/7.25.6)、[Xray-core v26.10.17（预发布，不自动切换内核）](https://github.com/XTLS/Xray-core/releases/tag/v26.10.17)、[Xray 证书固定安全公告](https://github.com/XTLS/Xray-core/security/advisories/GHSA-5wf9-h793-w73c)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
+兼容实现参考 [v2rayN allowInsecure 迁移说明](https://github.com/2dust/v2rayN/discussions/9460)、[v2rayN 7.24.9](https://github.com/2dust/v2rayN/releases/tag/7.24.9)、[v2rayN 7.25.6](https://github.com/2dust/v2rayN/releases/tag/7.25.6)、[Xray-core v26.10.21 安全更新](https://github.com/XTLS/Xray-core/releases/tag/v26.10.21)、[Xray 证书固定安全公告](https://github.com/XTLS/Xray-core/security/advisories/GHSA-5wf9-h793-w73c)、[Xray 分享链接规范](https://github.com/XTLS/Xray-core/discussions/716)、[Hysteria2 URI Scheme](https://v2.hysteria.network/docs/developers/URI-Scheme/) 和 [sing-box TLS](https://sing-box.sagernet.org/configuration/shared/tls/)。
 
 ### 4.2 安全更新与 sing-box 1.14 兼容
 
 - 官方组件从 GitHub Release 下载，并校验 Release 资源的 SHA-256；校验值缺失或不匹配时不会替换本机文件。
 - 核心和 Caddy 更新会先校验候选文件及现有配置，替换后检查服务状态，异常时自动恢复旧版本。
 - 脚本更新会保留安装清单、配置快照和 Reality 域名池数据；cloudflared 更新后会检查已有隧道服务。
-- cloudflared `2026.8.0` 和 `2026.8.1` 存在官方确认的路径处理问题，安装和更新均拒绝使用；当前复核基线为 [`2026.10.1`](https://github.com/cloudflare/cloudflared/releases/tag/2026.10.1)，包含 Go 安全工具链更新。此前的 [Docker bridge/QUIC 崩溃](https://github.com/cloudflare/cloudflared/issues/1737)和 [`auto` 不回退 HTTP/2](https://github.com/cloudflare/cloudflared/issues/1736)报告仍未关闭，升级或 CLI 检查通过不等于这些问题已解决。`sb doctor` 保留重启次数和最近日志诊断；仅在隔离环境或维护窗口验证 `--protocol http2`，不自动降级或重启现有隧道。
+- cloudflared 最低安全版为 `2026.10.4`，推荐验证基线为 [`2026.10.7`](https://github.com/cloudflare/cloudflared/releases/tag/2026.10.7)：`10.2` 修复 [eMudhra 证书信任](https://blog.cloudflare.com/emudhra-certificate-compromise/)，`10.4` 修复 [metrics 调试接口泄露命令行凭据](https://github.com/cloudflare/cloudflared/commit/8cc81c7fcc)，`10.7` 修复 [HTTP/2 并发流限制回归](https://github.com/cloudflare/cloudflared/commit/87dfe005f2)。安装/更新会拒绝低于安全线、未知/预发布及原有 `2026.8.0/2026.8.1` 路径故障版本；已有旧二进制不会静默复用或自动替换。
+- 新建 CFtunnel 服务使用 `/etc/sing-box/cftunnel/<端口>.token`（目录 `0700`、文件 `0600`、root 持有）和官方 `--token-file` 参数，token 不再写入服务启动命令；metrics 显式绑定 `127.0.0.1:0`，关闭自动更新。凭据纳入安装清单及节点删除/卸载清理；启动失败清理本次新建的服务和凭据。已有同名服务不覆盖、不自动迁移；doctor 只读检查旧 token 用法、受管凭据权限和 metrics 配置，不打印 token 或访问调试接口。请在维护窗口核对自定义覆盖和实际监听，静态检查不等于运行进程已安全迁移。
+- 此前的 [Docker bridge/QUIC 崩溃](https://github.com/cloudflare/cloudflared/issues/1737)和 [`auto` 不回退 HTTP/2](https://github.com/cloudflare/cloudflared/issues/1736)报告仍需单独验收；保留重启次数和日志诊断，不自动降级、切换协议或重启现有隧道。
 - Caddy 稳定基线更新为 [`2.11.7`](https://github.com/caddyserver/caddy/releases/tag/v2.11.7)。后续正式版已包含 [forward_auth/reverse_proxy 安全修复](https://github.com/caddyserver/caddy/releases/tag/v2.11.6)，不再等待 `2.11.5` 发布；脚本默认配置不使用 `forward_auth`。`2.11.6` 的 HTTP/2 崩溃、约 60 秒流中断回归已在 `2.11.7` 修复，安装/更新会拒绝 `2.11.6`。升级前校验自定义配置并隔离测试长连接，不在业务高峰重启。
-- `sb doctor` 会区分 sing-box 最低兼容版 `1.13.19` 和推荐稳定版 `1.14.3`，并按文件列出旧 DNS server、FakeIP、DNS 规则、缓存字段、远程规则集 HTTP 客户端和内联 ACME 等兼容风险。
+- `sb doctor` 会区分 sing-box 最低兼容版 `1.13.19` 和推荐稳定版 `1.14.4`，并按文件列出旧 DNS server、FakeIP、DNS 规则、缓存字段、远程规则集 HTTP 客户端和内联 ACME 等兼容风险。
 - 普通主配置 `dns.servers[].address` 可由 `sb update core` 安全迁移；特殊 DNS server、节点目录中的旧 DNS 格式或 1.14 冲突规则会在更新前被阻止并要求手动处理。
-- sing-box [`1.14.3`](https://github.com/SagerNet/sing-box/releases/tag/v1.14.3) 是当前推荐稳定兼容基线，不等同于通过安全验收；默认更新只跟随正式版并先做兼容预检，不自动跟随 `1.15` alpha。计划在 1.16 移除的弃用字段会继续提前提示。
-- Reality 存在 [上游 #4610](https://github.com/SagerNet/sing-box/issues/4610) 报告：`1.14.2`、`1.14.3`、`1.15.0-alpha.10` 和 `alpha.12` 仍保留有问题的 uTLS 回退实现。doctor 会提示已复核风险；其他版本明确显示“尚未复核”，不把未列出的版本当作已修复。本项目只增加诊断和隔离复现，更换 SNI、Short ID 或缩短握手超时不能当作根治，也不会进行公网探测或修改节点。
-- `sb doctor` 独立检查本地二进制的 Go/x/net 编译信息，针对 [GO-2026-6603](https://pkg.go.dev/vuln/GO-2026-6603) 和 [GO-2026-6617](https://pkg.go.dev/vuln/GO-2026-6617) 提示 HTTP/2 风险。对应修复基线为 Go `1.26.9`（或 `1.27.2` 及以上分支）和 `x/net v0.60.0`；达到组件版本或通过 65 秒长连接测试不代表依赖安全。官方 Caddy `2.11.7` 的已复核构建仍含 Go `1.26.8` / `x/net v0.59.0`，本轮验证的 sing-box `1.14.3` 也仍报告 Go `1.26.8`。可利用性需结合实际协议与配置核查，应等待或验证上游安全构建，不自动重编译、停用 HTTP/2 或重启业务。
+- sing-box [`1.14.4`](https://github.com/SagerNet/sing-box/releases/tag/v1.14.4) 是当前推荐稳定兼容基线，不等同于通过安全验收；默认更新只跟随正式版并先做兼容预检，不自动跟随 `1.15` alpha。计划在 1.16 移除的弃用字段会继续提前提示。
+- Reality 存在 [上游 #4610](https://github.com/SagerNet/sing-box/issues/4610) 报告：`1.14.2`—`1.14.4`、`1.15.0-alpha.10`、`alpha.12` 和 `alpha.13` 仍保留有问题的 uTLS 回退实现；10 月 30 日上游报告在 `1.14.4` 再次复现。doctor 会提示已复核风险；其他版本明确显示“尚未复核”，不把未列出的版本当作已修复。本项目只增加诊断和隔离复现，更换 SNI、Short ID 或缩短握手超时不能当作根治，也不会进行公网探测或修改节点。
+- `sb doctor` 独立检查本地二进制的 Go/x/net 编译信息，针对 [GO-2026-6603](https://pkg.go.dev/vuln/GO-2026-6603) 和 [GO-2026-6617](https://pkg.go.dev/vuln/GO-2026-6617) 提示 HTTP/2 风险。对应修复基线为 Go `1.26.9`（或 `1.27.2` 及以上分支）和 `x/net v0.60.0`；达到组件版本或通过 65 秒长连接测试不代表依赖安全。已复核的官方 Caddy `2.11.7` 构建仍含 Go `1.26.8` / `x/net v0.59.0`；本地验证的 sing-box `1.14.4` Windows 构建报告 Go `1.26.10`，但 `version` 未给出完整依赖，不将其当作 x/net 已修复。可利用性需结合实际协议与配置核查，应等待或验证上游安全构建，不自动重编译、停用 HTTP/2 或重启业务。
 - Caddy 使用只读 `build-info`，sing-box 使用 `version`。缺失信息、自定义替换或预发布工具链均显示“未核实”；可在隔离开发机用 `go version -m <二进制副本>` 补查完整依赖，不要求服务器安装 Go。doctor 不自动调用 Go，避免工具链下载、遥测或缓存写入；此检查不是完整漏洞扫描。
+- doctor 另行检查 [eMudhra 事件的 Go 补丁](https://go.dev/blog/emudhra-incident)：Go `1.26.10` 或 `1.27.3+`。旧的 HTTP/2 补丁线与证书拒信任补丁线分别判断；系统 CA、自定义 CA 和应用内置证书库仍需按发行版/应用公告检查。下载摘要与元数据来自 HTTPS，同渠道 SHA-256 不能替代可信的 TLS 路径。doctor 不修改信任库、不自动联网测试；浏览器或 curl 拒绝问题证书，不代表其他程序也安全。
 - sing-box 1.15 的新字段 [`certificate_sha256`](https://sing-box.sagernet.org/configuration/shared/tls/#certificate_sha256) 固定完整 DER 证书，与固定公钥的 `certificate_public_key_sha256` 不同。1.14 配置继续使用现有 SPKI 片段，不提前写入新字段、不创造 URI 参数；待上游稳定发布和客户端映射验证后再启用。
 
 ---
@@ -307,6 +310,8 @@ bash tests/e2e/smoke-reality.sh
 ```
 
 `test-sing-box-release.sh` 会下载并校验当前推荐稳定核心，然后检查 DNS 迁移结果与代表节点配置；需要访问 GitHub Release。`smoke-reality.sh` 会创建并删除 Reality 测试节点，请只在测试机执行。
+
+额外的 `bash tests/integration/test-upstream-runtime.sh` 只使用临时文件和回环监听，检查 Caddy 长连接、Reality EOF 与组件版本。Linux CI 设置 `UPSTREAM_CLOUDFLARED_ISOLATED=1`，在独立网络命名空间内用假边缘核对 cloudflared HTTP/2 SETTINGS 和 metrics 不泄露测试凭据；需要 `sudo`、`unshare`、`ip`，不建立公网隧道，也不是吞吐基准。Windows 不运行这个 Linux 子测试；新增 Linux 夹具需经 CI 验证。`UPSTREAM_REALITY_REQUIRE_FIXED=1` 开启严格修复验收，当前官方 `1.14.4` 仍会失败。
 完整 VPS 回归清单见 [docs/VPS_REGRESSION.md](./docs/VPS_REGRESSION.md)。
 
 如果只想安全检查只读命令，运行：

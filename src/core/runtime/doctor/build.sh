@@ -43,6 +43,8 @@ runtime_doctor_go_build_report() {
         esac
     done < <(runtime_doctor_parse_go_build <<< "$metadata")
 
+    runtime_doctor_go_ca_report "$label" "$go_version" || issue=1
+
     # Scope: GO-2026-6603 / GO-2026-6617 only, not a vulnerability scanner.
     if [[ $go_version =~ ^go[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         value=${go_version#go}
@@ -75,6 +77,25 @@ runtime_doctor_go_build_report() {
     return "$issue"
 }
 
+# Separate from the HTTP/2 checks: a patched HTTP/2 build can still trust the
+# compromised eMudhra intermediates. Native metadata is not a TLS path test.
+runtime_doctor_go_ca_report() {
+    local label=$1 go_version=$2 version
+
+    if [[ $go_version =~ ^go[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        version=${go_version#go}
+        if { version_is_at_least "$version" 1.26.10 && version_is_less_than "$version" 1.27.0; } || version_is_at_least "$version" 1.27.3; then
+            runtime_doctor_ok "$label eMudhra: $go_version 达到 Go 中间证书拒信任补丁基线（非实际 TLS 路径验收）"
+            return 0
+        fi
+        runtime_doctor_warn "$label eMudhra: $go_version 低于 Go 1.26.10 / 1.27.3 补丁基线，需核查证书信任风险"
+    else
+        runtime_doctor_warn "$label eMudhra: Go 编译版本未核实，不能认定已阻止受损中间证书"
+    fi
+    runtime_doctor_info "请验证上游安全构建及实际 TLS 校验路径；不会自动重编译、替换或重启服务."
+    return 1
+}
+
 runtime_doctor_go_build_binary() {
     local label=$1 binary=$2 kind=$3 metadata=""
 
@@ -101,6 +122,7 @@ runtime_doctor_build_security() {
     if binary=$(command -v cloudflared) && [[ -x $binary ]]; then
         runtime_doctor_go_build_binary cloudflared "$binary" cloudflared || issue=1
     fi
-    runtime_doctor_info "编译依赖检查仅覆盖 GO-2026-6603/GO-2026-6617；可在隔离开发机用 go version -m <二进制副本> 补查，不需要在服务器安装 Go，doctor 也不自动调用 Go."
+    runtime_doctor_info "编译依赖检查覆盖 GO-2026-6603/GO-2026-6617 和 eMudhra 事件；可在隔离开发机用 go version -m <二进制副本> 补查，不需要在服务器安装 Go，doctor 也不自动调用 Go."
+    runtime_doctor_info "系统 CA/自定义 CA/内置证书库状态未核实：请按发行版公告更新并单独验证实际 TLS 路径。浏览器或 curl 测试通过不代表其他应用安全；doctor 不联网探测或修改信任库."
     return "$issue"
 }

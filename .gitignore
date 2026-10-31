@@ -12,6 +12,7 @@
 .env.*
 !.env.example
 *.key
+*.token
 *.pem
 *.crt
 *.cer

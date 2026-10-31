@@ -30,7 +30,7 @@ sing_box_minimum_supported_version() {
 }
 
 sing_box_recommended_stable_version() {
-    printf '%s\n' '1.14.3'
+    printf '%s\n' '1.14.4'
 }
 
 sing_box_recommended_min_version() {
@@ -66,18 +66,33 @@ cloudflared_version_is_blocked() {
 }
 
 cloudflared_recommended_stable_version() {
-    printf '%s\n' '2026.10.1'
+    printf '%s\n' '2026.10.7'
+}
+
+# 2026.10.2 distrusts the compromised eMudhra keys; 2026.10.4 also
+# removes command-line secrets from metrics debug endpoints.
+cloudflared_minimum_safe_version() {
+    printf '%s\n' '2026.10.4'
+}
+
+cloudflared_version_is_supported() {
+    local version
+
+    version=$(version_normalize "$1")
+    [[ $version =~ ^[0-9]{4}\.[0-9]+\.[0-9]+$ ]] || return 1
+    ! cloudflared_version_is_blocked "$version" &&
+        version_is_at_least "$version" "$(cloudflared_minimum_safe_version)"
 }
 
 caddy_version_has_stream_regression() {
     [[ $(version_normalize "$1") == 2.11.6 ]]
 }
 
-# Reviewed 2026-10-19: these releases retain the affected uTLS fallback.
+# Reviewed 2026-10-31: these releases retain the affected uTLS fallback.
 # Versions outside this list are unreviewed, NOT implicitly fixed.
 sing_box_version_has_reported_reality_fallback_risk() {
     case $(version_normalize "$1") in
-        1.14.2 | 1.14.3 | 1.15.0-alpha.10 | 1.15.0-alpha.12) return 0 ;;
+        1.14.2 | 1.14.3 | 1.14.4 | 1.15.0-alpha.10 | 1.15.0-alpha.12 | 1.15.0-alpha.13) return 0 ;;
         *) return 1 ;;
     esac
 }

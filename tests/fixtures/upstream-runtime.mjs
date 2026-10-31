@@ -15,6 +15,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const dir = process.env.UPSTREAM_TEST_DIR;
 assert.ok(dir && process.env.CADDY_BIN && process.env.SING_BOX_CORE_BIN, 'Use the opt-in shell entry point');
+// Keep Caddy autosave/data files inside this invocation, including on Windows.
+const fixtureEnv = { ...process.env, HOME: dir, XDG_CONFIG_HOME: join(dir, 'config'), XDG_DATA_HOME: join(dir, 'data'),
+    APPDATA: join(dir, 'config'), LOCALAPPDATA: join(dir, 'data') };
 const children = [];
 const sockets = new Set();
 const servers = [];
@@ -54,12 +57,12 @@ async function unusedPort() {
     return port;
 }
 function run(binary, args) {
-    const result = spawnSync(binary, args, { encoding: 'utf8', timeout: 10_000 });
+    const result = spawnSync(binary, args, { encoding: 'utf8', timeout: 10_000, env: fixtureEnv });
     assert.equal(result.status, 0, result.stderr || result.error?.message);
     return result.stdout;
 }
 function start(binary, args) {
-    const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
+    const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true, env: fixtureEnv });
     children.push(child);
     child.log = '';
     child.stderr.on('data', chunk => { child.log = (child.log + chunk).slice(-8000); });

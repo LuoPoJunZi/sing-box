@@ -1,6 +1,16 @@
 #!/bin/bash
 
 install_cloudflared() {
+    local installed_version
+    if command -v cloudflared > /dev/null 2>&1; then
+        installed_version=$(cloudflared --version 2> /dev/null) || return 1
+        installed_version=$(awk 'NR == 1 {sub(/\r$/, ""); print $3}' <<< "$installed_version")
+        if ! cloudflared_version_is_supported "$installed_version"; then
+            err "现有 cloudflared 未达到安全要求；请在维护窗口升级到 $(cloudflared_recommended_stable_version)。本次不替换或重启现有隧道."
+            return 1
+        fi
+        return 0
+    fi
     if ! command -v cloudflared > /dev/null 2>&1; then
         msg "正在下载并安装 Cloudflare Tunnel (cloudflared)..."
         local cf_arch="amd64" tmp_dir metadata latest asset candidate candidate_version
@@ -20,9 +30,9 @@ install_cloudflared() {
             return 1
         fi
         latest=$(github_release_tag "$metadata")
-        if cloudflared_version_is_blocked "$latest"; then
+        if ! cloudflared_version_is_supported "$latest"; then
             rm -rf -- "$tmp_dir"
-            err "cloudflared $latest 存在官方确认的路径处理问题，已拒绝安装."
+            err "cloudflared $latest 未达到安全要求，已拒绝安装；至少需要 $(cloudflared_minimum_safe_version)."
             return 1
         fi
         if ! download_verified_release_asset cloudflare/cloudflared "$latest" "$asset" "$candidate" cloudflared; then
@@ -38,9 +48,9 @@ install_cloudflared() {
         fi
         candidate_version=$(awk 'NR == 1 {print $3}' <<< "$candidate_version")
         candidate_version=${candidate_version%$'\r'}
-        if [[ -z $candidate_version || $(version_normalize "$candidate_version") != "${latest#v}" ]] || cloudflared_version_is_blocked "$candidate_version"; then
+        if [[ -z $candidate_version || $(version_normalize "$candidate_version") != "${latest#v}" ]] || ! cloudflared_version_is_supported "$candidate_version"; then
             rm -rf -- "$tmp_dir"
-            err "cloudflared 候选文件无法运行、版本不匹配或存在已知路径问题."
+            err "cloudflared 候选文件无法运行、版本不匹配或未达到安全要求."
             return 1
         fi
         if ! install -m 0755 "$candidate" /usr/local/bin/cloudflared; then

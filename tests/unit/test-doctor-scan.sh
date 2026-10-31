@@ -28,7 +28,7 @@ output=$(runtime_doctor_sing_box_config_compat || true)
 # Report the reviewed upstream Reality bug only when Reality nodes exist.
 printf '%s\n' '{"inbounds":[{"type":"vless","listen_port":31001,"users":[{"uuid":"test"}],"tls":{"reality":{"enabled":true,"private_key":"test","short_id":["0123abcd"],"handshake":{"server":"example.com"}},"server_name":"example.com"}}],"outbounds":[{"tag":"public_key_test"}]}' > "$is_conf_dir/reality.json"
 runtime_doctor_port_listening() { return 0; }
-for is_core_ver in 1.14.2 1.14.3 1.15.0-alpha.10 1.15.0-alpha.12; do
+for is_core_ver in 1.14.2 1.14.3 1.14.4 1.15.0-alpha.10 1.15.0-alpha.12 1.15.0-alpha.13; do
     if runtime_doctor_reality > "$tmp_dir/output"; then
         echo '[doctor-scan] reviewed Reality risk did not return a warning' >&2
         exit 1
@@ -36,7 +36,7 @@ for is_core_ver in 1.14.2 1.14.3 1.15.0-alpha.10 1.15.0-alpha.12; do
     output=$(< "$tmp_dir/output")
     [[ $output == *'#4610'* && $output == *'尚未确认修复'* && $output == *'不重启服务'* ]]
 done
-for is_core_ver in 1.14.1 1.14.4 1.15.0 ''; do
+for is_core_ver in 1.14.1 1.14.5 1.15.0 ''; do
     if runtime_doctor_reality > "$tmp_dir/output"; then
         echo '[doctor-scan] unreviewed Reality version silently passed' >&2
         exit 1

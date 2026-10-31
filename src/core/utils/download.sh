@@ -114,6 +114,10 @@ download_stage_component() {
             asset="caddy_${version#v}_linux_${is_arch}.tar.gz"
             ;;
         cloudflared)
+            if ! cloudflared_version_is_supported "$version"; then
+                err "cloudflared 安全预检失败；至少需要 $(cloudflared_minimum_safe_version)，推荐 $(cloudflared_recommended_stable_version)."
+                return 1
+            fi
             name=cloudflared
             repo=cloudflare/cloudflared
             asset="cloudflared-linux-${is_arch}"

@@ -62,6 +62,14 @@ Expected:
 
 ## 4. Node Lifecycle Checks
 
+For CFtunnel scenarios, use a disposable host and synthetic/test credentials:
+
+- Confirm unsafe cloudflared versions (below `2026.10.4`, unknown/prerelease) are rejected before node configuration replacement; recommended baseline is `2026.10.7`.
+- New units must use `--token-file` and loopback metrics. Verify root ownership and `0700` directory / `0600` file modes without printing token contents. Never paste `systemctl cat`/process command lines from legacy units into reports.
+- Verify creation/start failures remove only the newly created unit/token, and node deletion/uninstall removes managed credentials.
+- Doctor should warn about legacy credentials, overrides and unverified metrics without revealing secrets or modifying/restarting services. Existing services are not auto-migrated.
+- The isolated Linux fake-edge test inspects HTTP/2 SETTINGS and metrics only; it does not replace public-client end-to-end or QUIC acceptance. Do not run host-service lifecycle tests on existing production workloads.
+
 Reality quick path:
 
 ```bash
