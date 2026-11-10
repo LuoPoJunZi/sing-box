@@ -446,14 +446,14 @@ sb domain del example.com
 
 <table>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="260" valign="top" nowrap>
       <a href="https://github.com/LuoPoJunZi">
         <img src="https://github.com/LuoPoJunZi.png?size=96" width="72" alt="LuoPoJunZi"><br>
         <strong>LuoPoJunZi</strong>
       </a><br>
       <sub>sing-box 项目维护者</sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="260" valign="top" nowrap>
       <a href="https://github.com/233boy/sing-box">
         <img src="https://github.com/233boy.png?size=96" width="72" alt="233boy"><br>
         <strong>233boy</strong>

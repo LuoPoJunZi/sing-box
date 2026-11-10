@@ -437,14 +437,14 @@ For built-in domains, this writes to disable list without source edits.
 
 <table>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="260" valign="top" nowrap>
       <a href="https://github.com/LuoPoJunZi">
         <img src="https://github.com/LuoPoJunZi.png?size=96" width="72" alt="LuoPoJunZi"><br>
         <strong>LuoPoJunZi</strong>
       </a><br>
       <sub>sing-box project maintainer</sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="260" valign="top" nowrap>
       <a href="https://github.com/233boy/sing-box">
         <img src="https://github.com/233boy.png?size=96" width="72" alt="233boy"><br>
         <strong>233boy</strong>
