@@ -141,6 +141,31 @@ done
     is_config_name=runtime-test
     node_build_config || exit 1
 ) > "$tmp_dir/reality.json"
+
+# Validate the real script's main/import/disguise and WS/H2/gRPC Caddyfiles.
+# Candidate validation uses the Node fixture's private HOME/data directories.
+(
+    set +u
+    . src/caddy.sh
+    is_caddy_dir="$tmp_dir/generated-caddy"
+    if [[ ${OSTYPE:-} == msys* ]]; then is_caddy_dir=$(cygpath -m "$is_caddy_dir"); fi
+    is_caddy_conf="$is_caddy_dir/conf"
+    is_caddyfile="$is_caddy_dir/Caddyfile"
+    is_http_port=18080
+    is_https_port=18443
+    # The legacy generator returns the status of its optional .add branch.
+    caddy_config new || [[ -s $is_caddyfile ]] || exit 1
+    port=19000
+    proxy_site=example.com
+    for protocol in ws h2 grpc; do
+        host="$protocol.runtime.invalid"
+        path=/test
+        [[ $protocol != grpc ]] || path='test'
+        caddy_config "$protocol" || exit 1
+        caddy_config proxy || [[ -s $is_caddy_site_file.add ]] || exit 1
+        ((port += 1))
+    done
+)
 export CADDY_BIN SING_BOX_CORE_BIN CLOUDFLARED_BIN
 UPSTREAM_TEST_DIR=$tmp_dir
 if [[ ${OSTYPE:-} == msys* ]]; then

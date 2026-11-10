@@ -20,6 +20,14 @@ cat /etc/os-release
 date -u
 ```
 
+Kernel security is a separate check: [CVE-2026-98432](https://ubuntu.com/security/CVE-2026-98432)
+affects IPv4 TCP. Doctor only queries the running kernel/package and links vendor
+guidance; it does not verify backports or Livepatch. In containers, verify the host
+kernel separately. Installed updates or an absent reboot marker do not prove the
+running kernel is patched. Disabling MPTCP alone is insufficient. Schedule any
+kernel update/reboot separately; never apply sysctl/firewall changes during a
+non-disruptive validation run.
+
 ## 2. Fresh Install Flow
 
 ```bash

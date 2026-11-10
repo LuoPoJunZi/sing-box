@@ -25,7 +25,7 @@ if download_stage_component caddy v2.11.6 "$tmp_dir/stage"; then fail 'staging a
 if download caddy v2.11.6; then fail 'fresh install accepted Caddy 2.11.6'; fi
 
 # Mismatched/regressed candidates must never reach replacement or systemctl.
-is_new_ver=v2.11.7
+is_new_ver=v2.11.9
 download_stage_dir="$tmp_dir/stage"
 download_stage_root="$tmp_dir/content"
 mkdir "$download_stage_root"
@@ -38,18 +38,27 @@ for reported in v2.11.4 v2.11.6; do
 done
 is_new_ver=v2.11.6
 if admin_update_caddy; then fail 'matching regressed Caddy was accepted'; fi
-is_new_ver=v2.11.7
-printf '#!/bin/sh\nprintf "v2.11.7\\n"\nexit 1\n' > "$download_stage_root/caddy"
+is_new_ver=v2.11.9
+printf '#!/bin/sh\nprintf "v2.11.9\\n"\nexit 1\n' > "$download_stage_root/caddy"
 if admin_update_caddy; then fail 'failed Caddy version command was accepted'; fi
 
 # Exercise the allowed update and health rollback with file/service mocks.
 mkdir "$download_stage_dir"
 is_caddy_bin="$guard_test_dir/installed-caddy"
 is_caddyfile="$guard_test_dir/missing-Caddyfile"
-is_new_ver=v2.11.7
-printf '#!/bin/sh\nprintf "v2.11.7\\n"\n' > "$download_stage_root/caddy"
-chmod +x "$download_stage_root/caddy"
+is_new_ver=v2.11.9
 printf '%s\n' old-caddy > "$is_caddy_bin"
+# Stricter parsing in a new Caddy must reject custom configs before replacement
+# or a service restart. No actual Caddy or systemctl is invoked by this test.
+is_caddyfile="$guard_test_dir/custom-Caddyfile"
+printf '%s\n' incompatible-custom-config > "$is_caddyfile"
+printf '#!/bin/sh\ncase "$1" in version) printf "v2.11.9\\n" ;; validate) exit 1 ;; *) exit 2 ;; esac\n' > "$download_stage_root/caddy"
+chmod +x "$download_stage_root/caddy"
+if admin_update_caddy; then fail 'invalid custom Caddyfile reached replacement'; fi
+grep -q old-caddy "$is_caddy_bin" || fail 'invalid config replaced installed Caddy'
+is_caddyfile="$guard_test_dir/missing-Caddyfile"
+printf '#!/bin/sh\nprintf "v2.11.9\\n"\n' > "$download_stage_root/caddy"
+chmod +x "$download_stage_root/caddy"
 admin_update_replace_binary() { command cp -- "$1" "$2"; }
 systemctl() { printf '%s\n' "$*" >> "$guard_test_dir/service-events"; }
 health_ok=0
@@ -58,7 +67,7 @@ if admin_update_caddy; then fail 'unhealthy Caddy update succeeded'; fi
 grep -q old-caddy "$is_caddy_bin" || fail 'Caddy rollback did not restore old binary'
 health_ok=1
 admin_update_caddy || fail 'matching healthy Caddy update failed'
-grep -q v2.11.7 "$is_caddy_bin" || fail 'matching Caddy candidate was not retained'
+grep -q v2.11.9 "$is_caddy_bin" || fail 'matching Caddy candidate was not retained'
 
 admin_update_replace_binary() { fail 'unsafe cloudflared reached binary replacement'; }
 is_new_ver=2026.10.7

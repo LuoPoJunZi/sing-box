@@ -38,7 +38,7 @@ sing_box_recommended_min_version() {
 }
 
 caddy_recommended_stable_version() {
-    printf '%s\n' '2.11.7'
+    printf '%s\n' '2.11.9'
 }
 
 caddy_version_has_forward_auth_risk() {

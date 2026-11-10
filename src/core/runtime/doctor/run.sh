@@ -9,11 +9,17 @@ runtime_doctor() {
     local warn_service=0 warn_caddy=0 warn_network=0 warn_dns=0 warn_jq=0 warn_jq_version=0
     local warn_core_version=0 warn_cloudflared_version=0 warn_cloudflared_runtime=0 warn_cloudflared_security=0
     local warn_caddy_security=0 warn_sing_box_compat=0 warn_reality=0 warn_build_security=0
+    local warn_kernel_security=0
     local jq_version=""
 
     msg "\n============= 系统诊断 (doctor) ============="
 
     runtime_doctor_system_info
+
+    msg "------------- 内核安全核查 -------------"
+    if ! runtime_doctor_kernel_security; then
+        warn_kernel_security=1
+    fi
 
     msg "------------- 终端颜色 -------------"
     runtime_doctor_color
@@ -240,6 +246,9 @@ runtime_doctor() {
         fi
         if [[ $warn_cloudflared_security -eq 1 ]]; then
             msg "18) cloudflared 凭据/metrics：按上方提示在维护窗口核查 token 文件权限及回环监听；已有服务不会自动迁移或重启"
+        fi
+        if [[ $warn_kernel_security -eq 1 ]]; then
+            msg "19) Linux 内核：按发行版公告核对 CVE-2026-98432 的运行内核补丁/Livepatch 状态；更新与必要重启应另行安排维护窗口，脚本不执行"
         fi
         msg "----------------------------------------"
     fi

@@ -3,6 +3,7 @@
 # Stable entry point for the diagnostic modules (also sourced by focused tests).
 . "${BASH_SOURCE[0]%/*}/doctor/output.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/system.sh"
+. "${BASH_SOURCE[0]%/*}/doctor/kernel.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/compat.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/build.sh"
 . "${BASH_SOURCE[0]%/*}/doctor/tunnel.sh"

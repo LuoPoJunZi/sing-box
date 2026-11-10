@@ -178,6 +178,8 @@ async function clientHello() {
 }
 
 try {
+    run(process.env.CADDY_BIN, ['validate', '--adapter', 'caddyfile', '--config', join(dir, 'generated-caddy', 'Caddyfile')]);
+    console.log('[upstream-runtime] PASS Caddy production main/import, WS, H2, gRPC and disguise configs');
     const origin = http.createServer((request, response) => {
         request.resume();
         request.once('end', () => {

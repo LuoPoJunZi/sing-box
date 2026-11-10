@@ -22,7 +22,7 @@ msg() { :; }
 [[ $(sing_box_minimum_supported_version) == 1.13.19 ]] || fail "minimum supported sing-box version changed unexpectedly"
 [[ $(sing_box_recommended_stable_version) == 1.14.4 ]] || fail "recommended stable sing-box version is not 1.14.4"
 [[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
-[[ $(caddy_recommended_stable_version) == 2.11.7 ]] || fail "recommended Caddy baseline is not 2.11.7"
+[[ $(caddy_recommended_stable_version) == 2.11.9 ]] || fail "recommended Caddy baseline is not 2.11.9"
 [[ $(cloudflared_recommended_stable_version) == 2026.10.7 ]] || fail "recommended cloudflared baseline is not 2026.10.7"
 [[ $(cloudflared_minimum_safe_version) == 2026.10.4 ]] || fail "cloudflared security floor drift"
 caddy_version_has_stream_regression v2.11.6 || fail "Caddy streaming regression was not detected"
@@ -189,7 +189,7 @@ if runtime_doctor_caddy_security; then
     fail "Caddy forward_auth/reverse_proxy risk passed doctor"
 fi
 grep -q 'risk.conf' <<< "$doctor_output" || fail "doctor did not list the risky Caddy config"
-grep -q '2.11.7' <<< "$doctor_output" || fail "doctor did not mention the patched Caddy target"
+grep -q '2.11.9' <<< "$doctor_output" || fail "doctor did not mention the patched Caddy target"
 if grep -q '正式发布后' <<< "$doctor_output"; then fail "doctor still waits for an already released Caddy fix"; fi
 
 doctor_output=""
@@ -197,14 +197,19 @@ is_caddy_ver=v2.10.2
 if runtime_doctor_caddy_security; then
     fail "old Caddy version unexpectedly passed the recommended baseline"
 fi
-grep -q '低于已复核稳定基线 2.11.7' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
+grep -q '低于已复核稳定基线 2.11.9' <<< "$doctor_output" || fail "doctor did not report the Caddy stable baseline"
 
 doctor_output=""
 is_caddy_ver=v2.11.6
 if runtime_doctor_caddy_security; then fail "Caddy 2.11.6 regression passed doctor"; fi
 grep -q '约 60 秒' <<< "$doctor_output" || fail "doctor did not report Caddy streaming regression"
 doctor_output=""
-is_caddy_ver=v2.11.7
+for is_caddy_ver in v2.11.7 v2.11.8; do
+    doctor_output=""
+    if runtime_doctor_caddy_security; then fail "Caddy before the 2.11.9 baseline passed doctor"; fi
+done
+doctor_output=""
+is_caddy_ver=v2.11.9
 runtime_doctor_caddy_security || fail "fixed Caddy version failed doctor"
 if grep -q '上游错连风险\|长连接:' <<< "$doctor_output"; then fail "fixed Caddy version has obsolete warnings"; fi
 
