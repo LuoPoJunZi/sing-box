@@ -156,4 +156,26 @@ is_dont_show_info=
 output=$(query_info 2>&1)
 [[ $output == *'无法安全生成分享链接'* ]] || fail "sb info must explain missing pin"
 
+. src/core/env/defaults.sh
+[[ $(query_extract_remark "VLESS-REALITY-hk01-443.json" "" "443" "vless") == "hk01" ]] || fail "Reality remark extraction failed"
+[[ $(query_extract_remark "VLESS-HTTP2-REALITY-my-node-1-20443.json" "" "20443" "vless") == "my-node-1" ]] || fail "Reality-H2 hyphenated remark extraction failed"
+[[ $(query_extract_remark "VMess-WS-TLS-cdn-node-sub.example.com.json" "sub.example.com" "" "vmess") == "cdn-node" ]] || fail "TLS host remark extraction failed"
+[[ $(query_extract_remark "CFtunnel-home-nas-nas.example.com.json" "nas.example.com" "20500" "vless") == "home-nas" ]] || fail "CFtunnel remark extraction failed"
+[[ $(query_extract_remark "VLESS-REALITY-443.json" "" "443" "vless") == "luopojunzi" ]] || fail "legacy Reality filename did not default remark"
+[[ $(query_extract_remark "VMess-WS-TLS-example.com.json" "example.com" "" "vmess") == "luopojunzi" ]] || fail "legacy TLS filename did not default remark"
+
+reset_case
+unset custom_remark
+is_tls_cer="$tmp_dir/tls.cer"
+is_config_name="VLESS-REALITY-hk01-443.json"
+is_protocol=vless
+net=reality
+uuid='11111111-1111-1111-1111-111111111111'
+is_servername='www.microsoft.com'
+is_public_key='publickey'
+is_short_id='1a2b3c4d'
+net_type=tcp
+query_info
+[[ $is_url == *'#hk01' ]] || fail "query_info exported wrong remark fragment: $is_url"
+
 echo "[share-output] ok"

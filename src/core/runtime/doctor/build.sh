@@ -44,6 +44,7 @@ runtime_doctor_go_build_report() {
     done < <(runtime_doctor_parse_go_build <<< "$metadata")
 
     runtime_doctor_go_ca_report "$label" "$go_version" || issue=1
+    runtime_doctor_go_http1_report "$label" "$go_version" || issue=1
 
     # Scope: GO-2026-6603 / GO-2026-6617 only, not a vulnerability scanner.
     if [[ $go_version =~ ^go[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -62,6 +63,9 @@ runtime_doctor_go_build_report() {
     if [[ $net_version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         if version_is_at_least "$net_version" 0.60.0; then
             runtime_doctor_ok "$label x/net: $net_version，达到已复核 HTTP/2 公告修复基线"
+            if version_is_less_than "$net_version" 0.62.0; then
+                runtime_doctor_info "$label x/net/html: $net_version 低于 v0.62.0（CVE-2026-78661/CVE-2026-97045 仅影响解析不可信 HTML 的场景）"
+            fi
         else
             runtime_doctor_warn "$label x/net: $net_version，低于 GO-2026-6603/GO-2026-6617 修复版本 v0.60.0"
             issue=1
@@ -71,10 +75,29 @@ runtime_doctor_go_build_report() {
         issue=1
     fi
     if [[ $issue -eq 1 ]]; then
-        runtime_doctor_info "请结合实际 HTTP/2 监听和配置核查；优先采用上游安全构建。工具链基线为 Go 1.26.9 或 1.27.2 及以上，x/net 至少 v0.60.0."
+        runtime_doctor_info "请结合实际 HTTP/1 限流、HTTP/2 监听和配置核查；优先采用上游安全构建。HTTP/2 工具链基线为 Go 1.26.9 或 1.27.2+，MaxBytesReader 基线为 Go 1.26.11 或 1.27.4+，x/net 至少 v0.60.0."
         runtime_doctor_info "这不是可利用性结论；不会自动重编译、替换二进制、停用协议或重启服务."
     fi
     return "$issue"
+}
+
+# Separate from HTTP/2 and eMudhra: GO-2026-6859 (CVE-2026-97054) affects HTTP/1
+# servers concurrently writing response headers under MaxBytesReader/MaxBytesHandler.
+runtime_doctor_go_http1_report() {
+    local label=$1 go_version=$2 version
+
+    if [[ $go_version =~ ^go[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        version=${go_version#go}
+        if { version_is_at_least "$version" 1.26.11 && version_is_less_than "$version" 1.27.0; } || version_is_at_least "$version" 1.27.4; then
+            runtime_doctor_ok "$label GO-2026-6859: $go_version 达到 net/http MaxBytesReader 补丁基线"
+            return 0
+        fi
+        runtime_doctor_warn "$label GO-2026-6859: $go_version 低于 Go 1.26.11 / 1.27.4 补丁基线（影响启用请求体大小限制的 HTTP/1 服务）"
+    else
+        runtime_doctor_warn "$label GO-2026-6859: Go 编译版本未核实，不能排除 HTTP/1 MaxBytesReader 竞态风险"
+    fi
+    runtime_doctor_info "请结合实际 HTTP/1 请求体限制配置核查上游安全构建；不会自动重编译、替换或重启服务."
+    return 1
 }
 
 # Separate from the HTTP/2 checks: a patched HTTP/2 build can still trust the
@@ -122,7 +145,7 @@ runtime_doctor_build_security() {
     if binary=$(command -v cloudflared) && [[ -x $binary ]]; then
         runtime_doctor_go_build_binary cloudflared "$binary" cloudflared || issue=1
     fi
-    runtime_doctor_info "编译依赖检查覆盖 GO-2026-6603/GO-2026-6617 和 eMudhra 事件；可在隔离开发机用 go version -m <二进制副本> 补查，不需要在服务器安装 Go，doctor 也不自动调用 Go."
+    runtime_doctor_info "编译依赖检查覆盖 GO-2026-6603/GO-2026-6617、GO-2026-6859 和 eMudhra 事件；可在隔离开发机用 go version -m <二进制副本> 补查，不需要在服务器安装 Go，doctor 也不自动调用 Go."
     runtime_doctor_info "系统 CA/自定义 CA/内置证书库状态未核实：请按发行版公告更新并单独验证实际 TLS 路径。浏览器或 curl 测试通过不代表其他应用安全；doctor 不联网探测或修改信任库."
     return "$issue"
 }

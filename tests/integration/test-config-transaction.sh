@@ -139,4 +139,63 @@ jq -e --arg private "$private" --arg public "$public" '.inbounds[0].tls.reality.
 if write_change_key_action unused unused 'bad"key' "$public"; then fail "accepted invalid key"; fi
 [[ ! -e ${is_config_json}.write-lock ]]
 [[ -z $(find "$tmp_dir" -name '.config-txn.*' -print) ]]
-echo "[config-transaction] ok: rejection, replacement, rollback, callers, key edits"
+
+# CLI node changes preserve custom_remark and support SOCKS username updates; caddy_config returns 0.
+(
+    is_sh_dir=$ROOT_DIR
+    . src/lib/fs.sh
+    . src/core/env/defaults.sh
+    . src/core/validate/input.sh
+    . src/core/node/protocol.sh
+    . src/core/node/build.sh
+    . src/core/node/delete.sh
+    . src/core/query/parse.sh
+    . src/core/query/read.sh
+    . src/core/query/uri.sh
+    . src/core/query/tls_pin.sh
+    . src/core/query/info.sh
+    . src/core/node/change.sh
+    . src/core/node/add.sh
+    . src/caddy.sh
+    is_test() { validate_is_test "$@"; }
+    validate_is_port_used() { return 1; }
+    get() { query_get "$@"; }
+    info() { query_info "$@"; }
+    create() { write_create "$@"; }
+    add() { write_add "$@"; }
+    get_ip() { ip=203.0.113.10; }
+    get_uuid() { tmp_uuid=00000000-0000-4000-8000-000000000099; }
+    _green() { :; }
+    ui_style() { printf '%s' "$2"; }
+    ui_link() { printf '%s' "$*"; }
+    footer_msg() { :; }
+    unset is_main_start is_dry_run is_gen is_test_json is_config_file custom_remark is_change_id
+    rm -f "$is_conf_dir"/*.json
+    printf '%s\n' '{"inbounds":[{"tag":"Socks-my-custom-tag-21001.json","type":"socks","listen":"::","listen_port":21001,"users":[{"username":"olduser","password":"secret"}]}]}' > "$is_conf_dir/Socks-my-custom-tag-21001.json"
+    printf '%s\n' '{"inbounds":[{"tag":"peer","type":"socks","listen":"::","listen_port":21002,"users":[{"username":"p","password":"p"}]}]}' > "$is_conf_dir/peer.json"
+    write_change Socks-my-custom-tag-21001.json user newuser
+    wait
+    [[ -f "$is_conf_dir/Socks-my-custom-tag-21001.json" ]] || exit 1
+    jq -e '.inbounds[0].users[0].username == "newuser" and .inbounds[0].users[0].password == "secret"' "$is_conf_dir/Socks-my-custom-tag-21001.json" > /dev/null || exit 1
+
+    unset is_config_file custom_remark is_change_id
+    write_change Socks-my-custom-tag-21001.json port 21009
+    wait
+    [[ ! -e "$is_conf_dir/Socks-my-custom-tag-21001.json" && -f "$is_conf_dir/Socks-my-custom-tag-21009.json" ]] || exit 1
+    jq -e '.inbounds[0].listen_port == 21009 and .inbounds[0].users[0].username == "newuser"' "$is_conf_dir/Socks-my-custom-tag-21009.json" > /dev/null || exit 1
+
+    is_caddy_dir="$tmp_dir/caddy-ret"
+    is_caddy_conf="$is_caddy_dir/conf"
+    is_caddyfile="$is_caddy_dir/Caddyfile"
+    is_http_port=80
+    is_https_port=443
+    caddy_config new
+    host=example.com
+    port=22000
+    path=/ws
+    proxy_site=upstream.example.com
+    caddy_config ws
+    caddy_config proxy
+) || fail "CLI remark preservation, SOCKS user change, or caddy_config return status failed"
+
+echo "[config-transaction] ok: rejection, replacement, rollback, callers, key edits, remark/user changes"

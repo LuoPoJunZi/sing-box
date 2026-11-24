@@ -25,31 +25,40 @@ assert_warning() {
 }
 
 # Standard Caddy/go version -m formats, CRLF and paths containing spaces.
-safe=$'go\tgo1.26.10\ndep\tgolang.org/x/net\tv0.60.0\th1:test'
+safe=$'go\tgo1.26.11\ndep\tgolang.org/x/net\tv0.62.0\th1:test'
 output=$(runtime_doctor_go_build_report Caddy "$safe") || fail 'fixed build rejected'
-[[ $output != *WARN:* && $output == *'修复基线'* ]] || fail 'fixed build output incorrect'
-output=$(runtime_doctor_go_build_report core $'/tmp/path with spaces/core: go1.27.3\r\n\tdep\tgolang.org/x/net\tv0.61.0\th1:test\r\n') || fail 'Go embedded metadata/CRLF failed'
-for version in go1.26.10 go1.27.3 go1.28.0; do
-    runtime_doctor_go_build_report fixture "${safe/go1.26.10/$version}" > /dev/null || fail "fixed branch rejected: $version"
+[[ $output != *WARN:* && $output == *'修复基线'* && $output == *'GO-2026-6859'* ]] || fail 'fixed build output incorrect'
+output=$(runtime_doctor_go_build_report Caddy "${safe/v0.62.0/v0.60.0}") || fail 'HTTP/2-fixed x/net v0.60.0 rejected'
+[[ $output != *WARN:* && $output == *'x/net/html: v0.60.0 低于 v0.62.0'* ]] || fail 'x/net/html scope note missing'
+output=$(runtime_doctor_go_build_report core $'/tmp/path with spaces/core: go1.27.4\r\n\tdep\tgolang.org/x/net\tv0.62.0\th1:test\r\n') || fail 'Go embedded metadata/CRLF failed'
+for version in go1.26.11 go1.27.4 go1.28.0; do
+    runtime_doctor_go_build_report fixture "${safe/go1.26.11/$version}" > /dev/null || fail "fixed branch rejected: $version"
 done
 for version in go1.25.5 go1.26.8 go1.27.0 go1.27.1; do
-    assert_warning "${safe/go1.26.10/$version}" '受影响版本范围'
+    assert_warning "${safe/go1.26.11/$version}" '受影响版本范围'
 done
 for version in go1.27rc2 devel go1.26.9-custom unknown; do
-    assert_warning "${safe/go1.26.10/$version}" '未核实'
+    assert_warning "${safe/go1.26.11/$version}" '未核实'
 done
 for version in go1.26.9 go1.27.2; do
-    output=$(runtime_doctor_go_build_report fixture "${safe/go1.26.10/$version}") && fail 'HTTP/2-patched build passed eMudhra check'
+    output=$(runtime_doctor_go_build_report fixture "${safe/go1.26.11/$version}") && fail 'HTTP/2-patched build passed eMudhra check'
     [[ $output == *'eMudhra:'* && $output == *'低于 Go 1.26.10 / 1.27.3'* ]] || fail 'CA-specific warning missing'
+    [[ $output == *'GO-2026-6859:'* && $output == *'低于 Go 1.26.11 / 1.27.4'* ]] || fail 'GO-2026-6859 warning missing'
     [[ $output == *'达到已复核 HTTP/2 公告修复基线'* ]] || fail 'HTTP/2 and CA checks were conflated'
 done
-assert_warning "${safe/v0.60.0/v0.59.0}" '低于'
-assert_warning "${safe/v0.60.0/v0.60.0-20261001-test}" '未核实'
+for version in go1.26.10 go1.27.3; do
+    output=$(runtime_doctor_go_build_report fixture "${safe/go1.26.11/$version}") && fail 'pre-1.26.11/1.27.4 build passed GO-2026-6859 check'
+    [[ $output == *'OK:fixture eMudhra:'* ]] || fail 'eMudhra-patched build falsely warned on CA'
+    [[ $output == *'WARN:fixture GO-2026-6859:'* && $output == *'低于 Go 1.26.11 / 1.27.4'* ]] || fail 'GO-2026-6859 warning missing on 1.26.10/1.27.3'
+    [[ $output == *'达到已复核 HTTP/2 公告修复基线'* ]] || fail 'HTTP/2 and GO-2026-6859 checks were conflated'
+done
+assert_warning "${safe/v0.62.0/v0.59.0}" '低于'
+assert_warning "${safe/v0.62.0/v0.60.0-20261001-test}" '未核实'
 assert_warning '' '未核实'
 assert_warning $'Environment: go1.26.8 linux/amd64\nTags: test' '受影响版本范围'
 assert_warning $'Environment: go1.26.9 linux/amd64' 'x/net: 未核实'
 assert_warning "$safe"$'\ngo\tgo1.26.8' 'Go 编译版本: 未核实'
-assert_warning "$safe"$'\ndep\tgolang.org/x/net\tv0.61.0' 'x/net: 未核实'
+assert_warning "$safe"$'\ndep\tgolang.org/x/net\tv0.63.0' 'x/net: 未核实'
 
 # Effective replacement version, not the requested dependency version, wins.
 assert_warning "$safe"$'\t\n=>\tgolang.org/x/net\tv0.59.0\th1:test' '低于'

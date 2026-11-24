@@ -48,4 +48,17 @@ rm "$is_conf_dir/reality.json"
 is_core_ver=1.14.2
 output=$(runtime_doctor_reality || true)
 [[ $output == *'未发现配置'* && $output != *'#4610'* ]]
+
+# Verify snapshot diagnostics inspect $is_sh_dir/backups directories, not nonexistent snapshots/*.tar.gz.
+. src/core/runtime/snapshot.sh
+is_sh_dir="$tmp_dir/sh"
+output=$(runtime_doctor_snapshots)
+[[ $output == *'尚未创建快照目录'* && $output != *'snapshots'* ]]
+_green() { printf '%s' "$*"; }
+is_core_ver=1.14.4
+is_sh_ver=v26.11.10
+is_snapshot_id=
+runtime_snapshot_ensure doctor-test > /dev/null
+output=$(runtime_doctor_snapshots)
+[[ $output == *"配置快照数量: 1 ($is_sh_dir/backups)"* ]]
 echo "[doctor-scan] ok"

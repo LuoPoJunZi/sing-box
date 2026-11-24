@@ -23,7 +23,7 @@ msg() { :; }
 [[ $(sing_box_recommended_stable_version) == 1.14.4 ]] || fail "recommended stable sing-box version is not 1.14.4"
 [[ $(sing_box_recommended_min_version) == 1.13.19 ]] || fail "legacy minimum-version helper changed unexpectedly"
 [[ $(caddy_recommended_stable_version) == 2.11.9 ]] || fail "recommended Caddy baseline is not 2.11.9"
-[[ $(cloudflared_recommended_stable_version) == 2026.10.7 ]] || fail "recommended cloudflared baseline is not 2026.10.7"
+[[ $(cloudflared_recommended_stable_version) == 2026.11.2 ]] || fail "recommended cloudflared baseline is not 2026.11.2"
 [[ $(cloudflared_minimum_safe_version) == 2026.10.4 ]] || fail "cloudflared security floor drift"
 caddy_version_has_stream_regression v2.11.6 || fail "Caddy streaming regression was not detected"
 if caddy_version_has_stream_regression 2.11.7; then fail "fixed Caddy version was marked regressed"; fi
@@ -50,10 +50,10 @@ fi
 if admin_update_cloudflared_version_allowed 2026.8.1; then
     fail "cloudflared update preflight allowed a blocked version"
 fi
-for version in 2026.8.2 2026.10.1 2026.10.2 2026.10.3 2026.10.7-rc.1 unknown ''; do
+for version in 2026.8.2 2026.10.1 2026.10.2 2026.10.3 2026.11.2-rc.1 unknown ''; do
     if admin_update_cloudflared_version_allowed "$version"; then fail "unsafe/unverified cloudflared accepted: $version"; fi
 done
-for version in 2026.10.4 v2026.10.7 2026.11.0; do
+for version in 2026.10.4 v2026.10.7 2026.11.0 2026.11.1 v2026.11.2; do
     admin_update_cloudflared_version_allowed "$version" || fail "safe cloudflared rejected: $version"
 done
 caddy_version_has_forward_auth_risk v2.11.0 || fail "Caddy 2.11.0 forward_auth risk was not detected"
@@ -217,11 +217,13 @@ cloudflared() { printf '%s\n' 'cloudflared version 2026.9.3'; }
 doctor_output=""
 if runtime_doctor_cloudflared_version; then fail "old cloudflared version passed the new baseline"; fi
 grep -q '最低安全版 2026.10.4' <<< "$doctor_output" || fail "doctor did not enforce cloudflared security floor"
-cloudflared() { printf '%s\n' 'cloudflared version 2026.10.4'; }
-doctor_output=""
-if runtime_doctor_cloudflared_version; then fail "safe but older cloudflared passed recommended check"; fi
-grep -q '2026.10.7' <<< "$doctor_output" || fail "doctor did not recommend cloudflared 2026.10.7"
-cloudflared() { printf '%s\n' 'cloudflared version 2026.10.7'; }
+for older_safe in 2026.10.4 2026.10.7 2026.11.1; do
+    cloudflared() { printf 'cloudflared version %s\n' "$older_safe"; }
+    doctor_output=""
+    if runtime_doctor_cloudflared_version; then fail "safe but older cloudflared ($older_safe) passed recommended check"; fi
+    grep -q '2026.11.2' <<< "$doctor_output" || fail "doctor did not recommend cloudflared 2026.11.2"
+done
+cloudflared() { printf '%s\n' 'cloudflared version 2026.11.2'; }
 doctor_output=""
 runtime_doctor_cloudflared_version || fail "current cloudflared version failed doctor"
 grep -q '不代表' <<< "$doctor_output" || fail "doctor incorrectly implies all QUIC reports are fixed"

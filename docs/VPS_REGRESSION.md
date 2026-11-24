@@ -72,7 +72,7 @@ Expected:
 
 For CFtunnel scenarios, use a disposable host and synthetic/test credentials:
 
-- Confirm unsafe cloudflared versions (below `2026.10.4`, unknown/prerelease) are rejected before node configuration replacement; recommended baseline is `2026.10.7`.
+- Confirm unsafe cloudflared versions (below `2026.10.4`, unknown/prerelease) are rejected before node configuration replacement; recommended baseline is `2026.11.2`.
 - New units must use `--token-file` and loopback metrics. Verify root ownership and `0700` directory / `0600` file modes without printing token contents. Never paste `systemctl cat`/process command lines from legacy units into reports.
 - Verify creation/start failures remove only the newly created unit/token, and node deletion/uninstall removes managed credentials.
 - Doctor should warn about legacy credentials, overrides and unverified metrics without revealing secrets or modifying/restarting services. Existing services are not auto-migrated.

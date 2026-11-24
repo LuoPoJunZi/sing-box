@@ -2,7 +2,7 @@
 
 runtime_doctor() {
     local ok=0 warn_count=0 fail=0 conf_count=0
-    local domain_count=0 snapshot_count=0
+    local domain_count=0
     local host_ip="" host_ip6="" dns_test=""
     local doctor_missing_cmds=""
     local fail_core_bin=0 fail_config=0 fail_conf_dir=0 fail_check=0 fail_systemd=0
@@ -182,12 +182,7 @@ runtime_doctor() {
         domain_count=$(domain_collect_pool global 2> /dev/null | wc -l)
         runtime_doctor_ok "Reality 域名池条目: $domain_count"
     fi
-    if [[ -d $is_sh_dir/snapshots ]]; then
-        snapshot_count=$(find "$is_sh_dir/snapshots" -maxdepth 1 -type f -name '*.tar.gz' 2> /dev/null | wc -l)
-        runtime_doctor_ok "配置快照数量: $snapshot_count"
-    else
-        runtime_doctor_warn "配置快照目录不存在: $is_sh_dir/snapshots"
-    fi
+    runtime_doctor_snapshots
 
     msg "----------------------------------------------"
     msg "诊断结果: OK=$ok WARN=$warn_count FAIL=$fail"
@@ -242,7 +237,7 @@ runtime_doctor() {
             msg "16) Reality 上游报告：跟踪 SagerNet/sing-box #4610；先隔离复现，等待经验证的上游稳定修复，不在现有业务上试改"
         fi
         if [[ $warn_build_security -eq 1 ]]; then
-            msg "17) 编译依赖：分别核查 HTTP/2 公告、eMudhra 补丁和系统 CA；等待或验证上游安全构建，组件版本/长连接测试通过不代表已修复"
+            msg "17) 编译依赖：分别核查 HTTP/2 公告、eMudhra 证书补丁、GO-2026-6859 (MaxBytesReader) 和系统 CA；等待或验证上游安全构建，组件版本/长连接测试通过不代表已修复"
         fi
         if [[ $warn_cloudflared_security -eq 1 ]]; then
             msg "18) cloudflared 凭据/metrics：按上方提示在维护窗口核查 token 文件权限及回环监听；已有服务不会自动迁移或重启"

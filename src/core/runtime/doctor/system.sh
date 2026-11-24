@@ -117,6 +117,29 @@ runtime_doctor_manifest() {
     fi
 }
 
+runtime_doctor_snapshots() {
+    local backup_root="" snapshot_count=0
+    local snapshot_items=()
+
+    if declare -F runtime_snapshot_dir > /dev/null 2>&1; then
+        backup_root=$(runtime_snapshot_dir)
+    else
+        backup_root="$is_sh_dir/backups"
+    fi
+
+    if [[ -d $backup_root ]]; then
+        if declare -F runtime_snapshot_list_ids > /dev/null 2>&1; then
+            mapfile -t snapshot_items < <(runtime_snapshot_list_ids "$backup_root")
+            snapshot_count=${#snapshot_items[@]}
+        else
+            snapshot_count=$(find "$backup_root" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | wc -l)
+        fi
+        runtime_doctor_ok "配置快照数量: $snapshot_count ($backup_root)"
+    else
+        runtime_doctor_info "配置快照: 尚未创建快照目录 ($backup_root)，可执行 sb backup create 创建"
+    fi
+}
+
 runtime_doctor_system_info() {
     local os_name="" kernel="" arch=""
 

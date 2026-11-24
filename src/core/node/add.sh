@@ -45,12 +45,20 @@ write_add() {
                 get_port
                 is_https_port=$tmp_port
                 warn "端口 (80 或 443) 已经被占用, Caddy 将使用非标准端口实现自动配置 TLS, HTTP:$is_http_port HTTPS:$is_https_port\n"
-                msg "请确定是否继续???"
-                pause
+                if [[ ! ${is_dry_run:-} ]]; then
+                    msg "请确定是否继续???"
+                    pause
+                fi
             fi
             is_install_caddy=1
         fi
-        if [[ ! $host ]]; then ask string host "请输入域名"; fi
+        if [[ ! $host ]]; then
+            if [[ ${is_dry_run:-} ]]; then
+                err "DRY-RUN: TLS 节点预演请提供域名参数, 例如: sb dry-run add wss example.com"
+                return 1
+            fi
+            ask string host "请输入域名"
+        fi
         get host-test
     else
         if [[ $is_main_start ]]; then

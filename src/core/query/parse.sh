@@ -56,7 +56,10 @@ query_get() {
             fi
             ;;
         host-test)
-            if [[ $is_no_auto_tls || $is_gen || $is_dont_test_host ]]; then return; fi
+            if [[ $is_no_auto_tls || $is_gen || $is_dont_test_host || ${is_dry_run:-} ]]; then
+                [[ ${is_dry_run:-} && ! $is_no_auto_tls ]] && msg "DRY-RUN: 跳过域名 DNS 解析强制拦截 ($host)"
+                return 0
+            fi
             get_ip
             get ping
             if [[ ! $(grep $ip <<< $is_host_dns) ]]; then

@@ -140,8 +140,8 @@ admin_dispatch_command() {
         t | test) get test-run ;;
         reinstall) get "$1" ;;
         get-port)
-            get_port
-            msg $tmp_port
+            get_port readonly
+            msg "$tmp_port"
             ;;
         main) is_main_menu ;;
         v | ver | version)

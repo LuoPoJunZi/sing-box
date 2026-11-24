@@ -70,16 +70,16 @@ admin_update_caddy || fail 'matching healthy Caddy update failed'
 grep -q v2.11.9 "$is_caddy_bin" || fail 'matching Caddy candidate was not retained'
 
 admin_update_replace_binary() { fail 'unsafe cloudflared reached binary replacement'; }
-is_new_ver=2026.10.7
-for reported in 2026.10.1 2026.10.3 2026.10.4 unknown; do
+is_new_ver=2026.11.2
+for reported in 2026.10.1 2026.10.3 2026.10.7 2026.11.1 unknown; do
     printf '#!/bin/sh\nprintf "cloudflared version %s\\n"\n' "$reported" > "$download_stage_root/cloudflared"
     chmod +x "$download_stage_root/cloudflared"
     if admin_update_cloudflared; then fail 'unsafe/mismatched cloudflared update candidate accepted'; fi
 done
 
 # Mock downloads and install to a private log, never /usr/local/bin.
-requested=2026.10.7
-reported=2026.10.7
+requested=2026.11.2
+reported=2026.11.2
 fetch_ok=1
 download_ok=1
 install_ok=1
@@ -100,19 +100,19 @@ command() {
     if [[ $1 == -v && $2 == cloudflared ]]; then return 1; fi
     builtin command "$@"
 }
-for requested in 2026.8.0 v2026.8.1 2026.10.1 2026.10.2 2026.10.3 2026.10.7-rc.1; do
+for requested in 2026.8.0 v2026.8.1 2026.10.1 2026.10.2 2026.10.3 2026.11.2-rc.1; do
     if download_stage_component cloudflared "$requested" "$tmp_dir/unsafe-stage"; then fail 'unsafe cloudflared reached staging'; fi
     [[ ! -e $tmp_dir/unsafe-stage ]] || fail 'security rejection created staging files'
     if install_cloudflared; then fail "blocked cloudflared $requested installed"; fi
     [[ ! -e $tmp_dir/events ]] || fail 'blocked cloudflared was downloaded'
 done
-requested=2026.10.7
-for reported in 2026.8.1 2026.9.3 ''; do
+requested=2026.11.2
+for reported in 2026.8.1 2026.9.3 2026.10.7 ''; do
     : > "$tmp_dir/events"
     if install_cloudflared; then fail "mismatched cloudflared $reported installed"; fi
     if grep -q 'install\|manifest' "$tmp_dir/events"; then fail 'unsafe cloudflared reached install'; fi
 done
-reported=2026.10.7
+reported=2026.11.2
 candidate_exit=1
 : > "$tmp_dir/events"
 if install_cloudflared; then fail 'failed cloudflared version command was accepted'; fi
@@ -147,9 +147,10 @@ for reported in 2026.8.2 2026.10.1 2026.10.3 unknown; do
     if install_cloudflared; then fail 'unsafe existing cloudflared was reused'; fi
     [[ ! -s $tmp_dir/events ]] || fail 'unsafe existing binary caused download/install'
 done
-reported=2026.10.7
-install_cloudflared || fail 'safe existing cloudflared was rejected'
-[[ ! -s $tmp_dir/events ]] || fail 'safe existing binary was replaced'
+for reported in 2026.10.4 2026.10.7 2026.11.2; do
+    install_cloudflared || fail "safe existing cloudflared ($reported) was rejected"
+    [[ ! -s $tmp_dir/events ]] || fail 'safe existing binary was replaced'
+done
 candidate_exit=1
 if install_cloudflared; then fail 'failed existing version command was accepted'; fi
 echo '[upstream-install-guards] ok'

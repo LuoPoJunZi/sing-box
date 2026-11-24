@@ -66,7 +66,7 @@ cloudflared_version_is_blocked() {
 }
 
 cloudflared_recommended_stable_version() {
-    printf '%s\n' '2026.10.7'
+    printf '%s\n' '2026.11.2'
 }
 
 # 2026.10.2 distrusts the compromised eMudhra keys; 2026.10.4 also

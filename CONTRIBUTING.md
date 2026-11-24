@@ -90,12 +90,13 @@ is reported as `XFAIL ... NOT FIXED`, not a passing security fix. Set
 change, timeout tweak or passing Caddy test should be presented as a Reality fix.
 The normal offline suite skips both network-backed integration entry points.
 
-The stable compatibility baseline is sing-box 1.14.3; it is not a security claim.
+The stable compatibility baseline is sing-box 1.14.4; it is not a security claim.
 `sb doctor` reads Caddy `build-info` and core `version`. It never invokes Go:
 even `go version -m` may initialize telemetry/cache state. Complete missing
 metadata manually with a binary copy on an isolated development machine;
 Go is never installed by doctor and unverified metadata must remain a warning.
-GO-2026-6603/GO-2026-6617 need Go 1.26.9 (or 1.27.2+) and x/net 0.60.0+.
+GO-2026-6603/GO-2026-6617 need Go 1.26.9 (or 1.27.2+) and x/net 0.60.0+;
+eMudhra needs Go 1.26.10 (or 1.27.3+); GO-2026-6859 needs Go 1.26.11 (or 1.27.4+).
 Missing metadata and unreviewed replacements/toolchains must warn, never pass.
 Check effective module replacements, not just the requested version. A current
 official binary can still have old build dependencies. Do not present this

@@ -14,19 +14,20 @@ get_ip() {
 }
 
 get_port() {
+    local mode=${1:-}
     is_count=0
     while :; do
-        ((is_count++))
+        ((++is_count))
         if [[ $is_count -ge 233 ]]; then
             err "自动获取可用端口失败次数达到 233 次, 请检查端口占用情况."
         fi
         tmp_port=$(shuf -i 20000-65535 -n 1)
-        if [[ ! $(is_test port_used "$tmp_port") && $tmp_port != "$port" ]]; then
+        if [[ ! $(is_test port_used "$tmp_port") && $tmp_port != "${port:-}" ]]; then
             break
         fi
     done
 
-    if [[ $tmp_port && ! ${is_dry_run:-} && ! ${is_gen:-} && ! ${is_test_json:-} ]]; then
+    if [[ $mode != readonly && $tmp_port && ! ${is_dry_run:-} && ! ${is_gen:-} && ! ${is_test_json:-} ]]; then
         firewall_allow "$tmp_port"
     fi
 }

@@ -92,4 +92,42 @@ done
     [[ $(cat "$tmp_dir/create-calls") == preview ]]
     [[ ! -e "$tmp_dir/mutation" ]]
 )
-echo "[dry-run-writes] ok: rebuild, Caddy, firewall, dispatch, SNI stores, SS2022"
+
+# Pure query get-port must not mutate firewall rules even outside dry-run.
+(
+    unset is_dry_run is_gen is_test_json
+    port_out=""
+    msg() { port_out+="$1"; }
+    admin_dispatch_command get-port
+    [[ $port_out =~ ^[0-9]+$ ]] || exit 1
+    [[ ! -e "$tmp_dir/mutation" ]]
+)
+
+# TLS add in dry-run must not block on port-80/443 pause or interactive DNS host-test.
+(
+    is_sh_dir=$ROOT_DIR
+    . src/core/env/defaults.sh
+    . src/core/query/parse.sh
+    . src/core/node/add.sh
+    is_dry_run=1
+    unset is_gen is_test_json is_caddy is_no_auto_tls is_dont_test_host
+    is_test() {
+        case $1 in
+            port_used)
+                if [[ $2 == 80 || $2 == 443 ]]; then printf 'ok\n'; fi
+                ;;
+            *) printf 'ok\n' ;;
+        esac
+    }
+    _green() { printf '%s' "$*"; }
+    pause() { unexpected tls-pause; }
+    ask() { unexpected tls-ask; }
+    get_ip() { unexpected tls-get-ip; }
+    get() { query_get "$@"; }
+    create() { printf 'tls-preview:%s:%s\n' "$2" "$host" >> "$tmp_dir/tls-calls"; }
+    info() { unexpected tls-info; }
+    write_add wss example.com
+    [[ $(cat "$tmp_dir/tls-calls") == 'tls-preview:VMess-WS-TLS:example.com' ]]
+    [[ ! -e "$tmp_dir/mutation" ]]
+)
+echo "[dry-run-writes] ok: rebuild, Caddy, firewall, dispatch, SNI stores, SS2022, get-port, TLS preview"

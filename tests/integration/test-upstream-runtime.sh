@@ -153,8 +153,8 @@ done
     is_caddyfile="$is_caddy_dir/Caddyfile"
     is_http_port=18080
     is_https_port=18443
-    # The legacy generator returns the status of its optional .add branch.
-    caddy_config new || [[ -s $is_caddyfile ]] || exit 1
+    caddy_config new || exit 1
+    [[ -s $is_caddyfile ]] || exit 1
     port=19000
     proxy_site=example.com
     for protocol in ws h2 grpc; do
@@ -162,7 +162,8 @@ done
         path=/test
         [[ $protocol != grpc ]] || path='test'
         caddy_config "$protocol" || exit 1
-        caddy_config proxy || [[ -s $is_caddy_site_file.add ]] || exit 1
+        caddy_config proxy || exit 1
+        [[ -s $is_caddy_site_file.add ]] || exit 1
         ((port += 1))
     done
 )

@@ -1,5 +1,40 @@
 #!/bin/bash
 
+query_extract_remark() {
+    local config_name=${1:-} node_host=${2:-} node_port=${3:-} node_protocol=${4:-}
+    local base=${config_name%.json} proto matched_proto="" lower_base="" lower_proto="" remark=""
+
+    if [[ -n $node_host && $base == *"-$node_host" ]]; then
+        base=${base%-"$node_host"}
+    elif [[ -n $node_port && $base == *"-$node_port" ]]; then
+        base=${base%-"$node_port"}
+    elif [[ $base =~ ^(.+)-[0-9]+$ ]]; then
+        base=${BASH_REMATCH[1]}
+    fi
+
+    lower_base=${base,,}
+    for proto in ${protocol_list[@]+"${protocol_list[@]}"} Direct; do
+        lower_proto=${proto,,}
+        if [[ $lower_base == "$lower_proto" ]]; then
+            printf '%s\n' "luopojunzi"
+            return 0
+        fi
+        if [[ $lower_base == "${lower_proto}-"* && ${#proto} -gt ${#matched_proto} ]]; then
+            matched_proto=$proto
+        fi
+    done
+
+    if [[ -n $matched_proto ]]; then
+        remark=${base:$((${#matched_proto} + 1))}
+    else
+        remark=$base
+    fi
+    if [[ -z $remark || ${remark,,} == "${node_protocol,,}" ]]; then
+        remark="luopojunzi"
+    fi
+    printf '%s\n' "$remark"
+}
+
 query_info() {
     local encoded_remark="" encoded_user="" server_address="" tls_server_name="" uri_query=""
 
@@ -13,13 +48,8 @@ query_info() {
     is_url_error=
     query_tls_pin_reset
 
-    if [[ -z "$custom_remark" ]]; then
-        local tmp_name="${is_config_name%.json}"
-        local stripped_port="${tmp_name%-[0-9]*}"
-        custom_remark="${stripped_port#*-}"
-        if [[ -z "$custom_remark" || "$custom_remark" == "$is_protocol" ]]; then
-            custom_remark="luopojunzi"
-        fi
+    if [[ -z ${custom_remark:-} ]]; then
+        custom_remark=$(query_extract_remark "$is_config_name" "${host:-}" "${port:-}" "${is_protocol:-}")
     fi
     encoded_remark=$(query_uri_encode "$custom_remark")
     server_address=$(query_uri_host_name "$is_addr")

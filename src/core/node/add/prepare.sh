@@ -1,14 +1,16 @@
 #!/bin/bash
 
 write_add_prompt_remark() {
-    if [[ $is_main_start ]]; then
+    local default_remark=${custom_remark:-luopojunzi}
+    if [[ $is_main_start && ! ${is_dry_run:-} ]]; then
+        local input_remark=""
         echo ""
         echo -e "--------------------------------------------------------"
-        read -p "请输入该节点的自定义备注 (如留空按回车，则默认使用 luopojunzi): " custom_remark
-        if [[ -z "$custom_remark" ]]; then custom_remark="luopojunzi"; fi
+        read -r -p "请输入该节点的自定义备注 (如留空按回车，则默认使用 ${default_remark}): " input_remark
+        custom_remark=${input_remark:-$default_remark}
         echo -e "--------------------------------------------------------"
     else
-        custom_remark="luopojunzi"
+        custom_remark=$default_remark
     fi
 }
 
@@ -136,7 +138,7 @@ write_add_prepare_protocol_args() {
 }
 
 write_add_resolve_protocol() {
-    unset custom_remark
+    [[ ${is_change:-} ]] || unset custom_remark
     is_lower=${1,,}
     if [[ $is_lower ]]; then
         case $is_lower in

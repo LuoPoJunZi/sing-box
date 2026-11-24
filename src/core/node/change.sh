@@ -20,6 +20,7 @@ write_change() {
             key | publickey | privatekey) is_change_id=9 ;;
             sni | servername | servernames) is_change_id=10 ;;
             web | proxy-site) is_change_id=11 ;;
+            user | username) is_change_id=12 ;;
             *)
                 if [[ $is_try_change ]]; then return; fi
                 err "无法识别 ($2) 更改类型."
@@ -29,6 +30,7 @@ write_change() {
     if [[ $is_try_change ]]; then
         return
     fi
+    unset is_protocol is_config_file custom_remark
     if [[ $is_dont_auto_exit ]]; then
         get info $1
     else
@@ -49,6 +51,9 @@ write_change() {
         if [[ $is_auto_get_config ]]; then
             msg "\n自动选择: $is_config_file"
         fi
+    fi
+    if [[ -z ${custom_remark:-} && ${is_config_file:-} ]]; then
+        custom_remark=$(query_extract_remark "$is_config_file" "${host:-}" "${port:-}" "${is_protocol:-}")
     fi
 
     is_old_net=$net
@@ -154,9 +159,15 @@ write_change() {
             write_change_web_action "$@"
             ;;
         12)
+            is_new_user=$3
             if [[ ! $is_socks_user ]]; then err "($is_config_file) 不支持更改用户名 (Username)."; fi
-            ask string is_socks_user "请输入新用户名 (Username)"
-            add $net
+            if [[ $is_auto ]]; then
+                get_uuid
+                is_new_user=${tmp_uuid%%-*}
+            fi
+            if [[ ! $is_new_user ]]; then ask string is_new_user "请输入新用户名 (Username)"; fi
+            is_socks_user=$is_new_user
+            add "$net"
             ;;
     esac
 }
